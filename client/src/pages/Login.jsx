@@ -1,12 +1,15 @@
 import { useState } from "react";
 import "./styles.css"; // Ensure this file contains your CSS styles.
-
+import {useNavigate} from 'react-router-dom'
+import { useUser } from "../context/userContext";
 const Login = () => {
+  const navigate = useNavigate();
   // State for storing form inputs
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+  const { login } = useUser();
 
   // Handle input changes
   const handleChange = (e) => {
@@ -33,6 +36,18 @@ const Login = () => {
       });
       
       const data = await res.json();
+      // console.log(data);
+      if(data.ok) {
+        // add user context
+        login(data);
+        console.log(data);
+        
+        navigate('/newhome');
+      }
+      else {
+        alert(data.message);
+      }
+      
 
 
     }

@@ -1,7 +1,10 @@
 import React from "react";
 import "./styles.css"; // Ensure your styles are linked correctly.
-
+import { useUser } from "../context/userContext";
 const Home = () => {
+  const { user } = useUser();
+
+  
   return (
     <>
       {/* Navigation Bar */}

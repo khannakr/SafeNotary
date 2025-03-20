@@ -8,14 +8,18 @@ const router = express.Router();
 router.post('/sign-in', async (req, res) => {
     console.log("request received");
     
-    const { name,email, password} = req.body; // data from form
+    const { name, email, password} = req.body; // data from form
+    console.log(name, email, password);
+    
     const hashedPassword = bcryptjs.hashSync(password, 10); // hash password
-    const newUser = new User({ name,email, password: hashedPassword}); //create user
+    const newUser = new User({ name, email, password: hashedPassword}); //create user
     try {
         await newUser.save();
         res.status(201).json('User created successfully!');
     } catch (error) {
-        next(error);
+        console.log(error);
+        res.status(500).json('Error: ' + error);
+        
     }
 });
 

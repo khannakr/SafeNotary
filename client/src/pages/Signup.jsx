@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import validator from 'email-validator';
 import "./styles.css"; // Ensure the styles are linked correctly
-
+import {useNavigate} from 'react-router-dom';
 const SignUp = () => {
+  const navigate = useNavigate();
   const [formData,setFormData] = useState({});
       const handleChange = (e) => {
     console.log(formData);
@@ -10,6 +11,8 @@ const SignUp = () => {
       return {...prevData , [e.target.id]: e.target.value }
     })
   }
+  
+  
 const handleSubmit = async (e) => {
   console.log("helllooooo")
     // e.preventDefault()
@@ -30,7 +33,11 @@ const handleSubmit = async (e) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({...rest})
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password
+        })
       });
       const data = await res.json();
       // if (data.success === false) {
@@ -40,6 +47,7 @@ const handleSubmit = async (e) => {
 
       //setError(null);
       //navigate(`/sign-in/${params.role}`);
+      navigate("/login");
     }
     catch(err) {
       console.log(err);
