@@ -1,15 +1,33 @@
 import { useState } from "react";
 import "./styles.css"; // Ensure this file contains your CSS styles.
-import {useNavigate} from 'react-router-dom'
+import { useNavigate } from "react-router-dom";
 import { useUser } from "../context/userContext";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css"; // Ensure toast styles are loaded
+
 const Login = () => {
   const navigate = useNavigate();
+  const { login } = useUser();
+  
   // State for storing form inputs
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
-  const { login } = useUser();
+
+  // Function to display toast messages
+  const showToast = (message, type = "error") => {
+    toast(message, {
+      position: "top-right",
+      autoClose: 3000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      theme: "light",
+      type: type, // "success" or "error"
+    });
+  };
 
   // Handle input changes
   const handleChange = (e) => {
@@ -20,46 +38,45 @@ const Login = () => {
     }));
   };
 
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    try{
-      const res = await fetch('http://localhost:4000/api/auth/log-in', {
+
+    try {
+      const res = await fetch("http://localhost:4000/api/auth/log-in", {
         method: "POST",
         headers: {
-          'Content-type': "application/json"
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           email: formData.email,
-          password: formData.password
-        })
+          password: formData.password,
+        }),
       });
-      
+
       const data = await res.json();
-      // console.log(data);
-      if(data.ok) {
-        // add user context
-        login(data);
-        console.log(data);
-        
-        navigate('/newhome');
-      }
-      else {
-        alert(data.message);
-      }
+      console.log(data);
       
+      if (data.ok) {
+        login(data); // Add user to context
+        showToast("Login successful!", "success");
 
-
+        setTimeout(() => {
+          navigate("/newhome"); // Redirect after success
+        }, 1500);
+      } else {
+        showToast(data.message || "Invalid email or password");
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      showToast("Network error. Please try again later.");
     }
-    catch(err) {
-      console.log(err);
-      
-    }
-
   };
 
   return (
     <>
+      <ToastContainer />
+
       {/* Navigation Bar */}
       <header>
         <nav className="navbar">
@@ -81,14 +98,14 @@ const Login = () => {
               Email Address:
             </label>
             <input
-              type="text"
+              type="email"
               id="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
               required
               autoFocus
-              placeholder="Enter your mail id"
+              placeholder="Enter your email"
             />
           </div>
           <div className="form-group">

@@ -5,11 +5,14 @@ import bcryptjs from 'bcryptjs'
 
 const router = express.Router();
 
-router.post('/sign-in', async (req, res) => {
+router.post('/sign-up', async (req, res) => {
     console.log("request received");
     
     const { name, email, password} = req.body; // data from form
     console.log(name, email, password);
+    const existingUser = await User
+    .findOne({ email: email }); // check user exist in database
+    if (existingUser) return res.send(JSON.stringify({ok: false, message: "User already exist"}));
     
     const hashedPassword = bcryptjs.hashSync(password, 10); // hash password
     const newUser = new User({ name, email, password: hashedPassword}); //create user
@@ -41,9 +44,10 @@ router.post('/log-in', async (req, res) => {
       res
         .cookie('access_token', token) // store token in cookies
         .status(200)
-        .json({ok: true, ...rest, message: "User exists"});
+        .json({ok: true, ...rest});
     } catch (error) {
       console.log(error);
+        res.status(500).json({ok: false, message: "User exist"});
       
     }
 });
