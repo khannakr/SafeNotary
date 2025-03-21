@@ -26,7 +26,7 @@ const UploadFile = () => {
   const [fileHash, setFileHash] = useState("");
   const [keyHash, setKeyHash] = useState("");
   const {user} = useUser();
-  const userID = user._id;
+  // const userID = user._id; 
   
 
   const handleFileChange = (e) => {
