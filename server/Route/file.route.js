@@ -24,4 +24,18 @@ router.post("/new-file", async (req, res) => {
     }
 });
 
+router.get('/get/:userId', async (req, res) => {
+    const userId = req.params.userId;
+    try {
+        const response = await File.find({
+            userId: userId
+        })
+
+        return res.send({ok: true, files: response})
+    }catch(err) {
+        console.log(err);
+        return res.send({ok: false, message: err.message}) 
+    }
+})
+
 export default router;
