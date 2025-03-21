@@ -4,6 +4,7 @@ import userRouter from "./Route/auth.route.js";
 import cors from 'cors' // imppppppppp
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import fileRouter from "./Route/file.route.js";
 
 dotenv.config();
 const app = express();
@@ -20,6 +21,7 @@ mongoose.connect("mongodb://localhost:27017/", {
 .catch((error) => console.error("MongoDB connection error:", error));
 
 app.use('/api/auth', userRouter);
+app.use('/api/file', fileRouter)
 
 
   

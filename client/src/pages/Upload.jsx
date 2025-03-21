@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import CryptoJS from "crypto-js";
 import "./styles.css";
+import { useUser } from "../context/userContext.jsx"; 
 
 const generateSHA256Hash = async (file) => {
     return new Promise((resolve, reject) => {
@@ -24,6 +25,9 @@ const UploadFile = () => {
   const [uploadMessage, setUploadMessage] = useState("");
   const [fileHash, setFileHash] = useState("");
   const [keyHash, setKeyHash] = useState("");
+  const {user} = useUser();
+  const userID = user._id;
+  
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -121,6 +125,24 @@ const UploadFile = () => {
 
         // Step 5: Store IPFS CIDs and hash in state (For display/logging)
         setFileHash(fileHash);
+
+        const res = await fetch("http://localhost:4000/api/file/new-file", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            userId: userID,
+            pdf_url: "shdhfkksjdfsjdfk",
+            hash: fileHash,
+            encryptedFileCID: encryptedFileCID,
+            decryptionKey: decryptionKey
+          })
+        })
+        const data = await res.json();
+        console.log(data);
+        
+        
         setUploadMessage("File uploaded successfully!");
 
         console.log("✅ File Hash:", fileHash);
