@@ -64,6 +64,8 @@ const SignUp = () => {
       });
 
       const data = await res.json();
+      console.log(data);
+      
 
       if (data.ok) {
         showToast("Sign-up successful!", "success");

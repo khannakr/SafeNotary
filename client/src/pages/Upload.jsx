@@ -33,32 +33,42 @@ const UploadFile = () => {
   const encryptFile = async (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-
+  
       reader.onload = () => {
         const fileData = new Uint8Array(reader.result); // Read as binary
-        const key = CryptoJS.lib.WordArray.random(32); // 256-bit AES key
+  
+        // Generate a random 256-bit AES key (32 bytes)
+        const key = CryptoJS.lib.WordArray.random(32); 
         const keyBase64 = CryptoJS.enc.Base64.stringify(key); // Store key in Base64
-
+  
         // Encrypt the binary data
         const encrypted = CryptoJS.AES.encrypt(
           CryptoJS.lib.WordArray.create(fileData),
           keyBase64
         ).toString();
-
+  
         // Convert encrypted data into a Blob (PDF format)
         const encryptedBytes = new TextEncoder().encode(encrypted);
         const encryptedBlob = new Blob([encryptedBytes], { type: "application/pdf" });
-
+  
         // Convert key to a Blob
         const keyBlob = new Blob([keyBase64], { type: "text/plain" });
-
-        resolve({ encryptedFile: encryptedBlob, encryptionKey: keyBlob });
+  
+        // 🔥 Generate the decryption key (same as the encryption key)
+        const decryptionKey = keyBase64;
+  
+        resolve({
+          encryptedFile: encryptedBlob,
+          encryptionKey: keyBlob,
+          decryptionKey: decryptionKey,  // Return decryption key
+        });
       };
-
+  
       reader.onerror = (error) => reject(error);
       reader.readAsArrayBuffer(file); // Read file as binary
     });
   };
+  
 
   // 🔹 Upload to IPFS (Pinata)
   const uploadToIPFS = async (fileBlob, fileName) => {
@@ -99,7 +109,7 @@ const UploadFile = () => {
         console.log("SHA-256 Hash:", fileHash); // Debugging output
 
         // Step 2: Encrypt the file
-        const { encryptedFile, encryptionKey } = await encryptFile(file);
+        const { encryptedFile, encryptionKey, decryptionKey } = await encryptFile(file);
 
         // Step 3: Upload the encrypted file to IPFS
         const encryptedFileCID = await uploadToIPFS(encryptedFile, "encrypted_" + file.name);
@@ -168,14 +178,7 @@ const UploadFile = () => {
               </a>
             </p>
           )}
-          {keyHash && (
-            <p>
-              🔑 Encryption Key: 
-              <a href={`https://gateway.pinata.cloud/ipfs/${keyHash}`} target="_blank" rel="noopener noreferrer">
-                {keyHash}
-              </a>
-            </p>
-          )}
+          
         </div>
       </main>
 
