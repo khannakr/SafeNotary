@@ -26,7 +26,7 @@ const UploadFile = () => {
   const [fileHash, setFileHash] = useState("");
   const [keyHash, setKeyHash] = useState("");
   const {user} = useUser();
-  // const userID = user._id; 
+  const userID = user._id; 
   
 
   const handleFileChange = (e) => {
@@ -43,7 +43,7 @@ const UploadFile = () => {
   
         // Generate a random 256-bit AES key (32 bytes)
         const key = CryptoJS.lib.WordArray.random(32); 
-        const keyBase64 = CryptoJS.enc.Base64.stringify(key); // Store key in Base64
+        const keyBase64 = CryptoJS.enc.Base64.stringify(key); // Convert key to Base64
   
         // Encrypt the binary data
         const encrypted = CryptoJS.AES.encrypt(
@@ -64,7 +64,7 @@ const UploadFile = () => {
         resolve({
           encryptedFile: encryptedBlob,
           encryptionKey: keyBlob,
-          decryptionKey: decryptionKey,  // Return decryption key
+          decryptionKey: decryptionKey,  
         });
       };
   
