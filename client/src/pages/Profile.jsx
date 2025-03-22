@@ -77,7 +77,7 @@ const Profile = () => {
             <ul>
               {files.map((file, index) => (
                 <li key={index}>
-                  <p><strong>File Name:</strong> {file.fileName}</p>
+                  <p><strong>File Name:</strong> {file.filename}</p>
                   <button onClick={() => handleFileClick(file)}>View Details</button>
                 </li>
               ))}
