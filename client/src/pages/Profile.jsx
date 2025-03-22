@@ -12,6 +12,7 @@ const Profile = () => {
   const [selectedFile, setSelectedFile] = useState(null);
 
   // ✅ Fetch User Data
+  
   useEffect(() => {
     const fetchUserData = async () => {
       try {

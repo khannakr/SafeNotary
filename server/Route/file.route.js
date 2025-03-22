@@ -38,4 +38,19 @@ router.get('/get/:userId', async (req, res) => {
     }
 })
 
+router.get('/get-files/:userId', async (req, res) => {
+    const userId = req.params.userId;
+    console.log(userId);
+    
+    try {
+        const response = await File.find({
+            userId: userId
+        })
+        return res.send({ok: true, file: response})
+    }catch(err) {
+        console.log(err);
+        return res.send({ok: false, message: err.message}) 
+    }
+})
+
 export default router;
