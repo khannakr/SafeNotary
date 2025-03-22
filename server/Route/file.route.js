@@ -46,7 +46,7 @@ router.get('/get-files/:userId', async (req, res) => {
         const response = await File.find({
             userId: userId
         })
-        return res.send({ok: true, file: response})
+        return res.send({ok: true, files: response})
     }catch(err) {
         console.log(err);
         return res.send({ok: false, message: err.message}) 

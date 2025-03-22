@@ -8,25 +8,34 @@ const Profile = () => {
   const { user } = useUser();
   const userID = user ? user._id : null;
 
-  const [userData, setUserData] = useState(null);
+  const [userData, setUserData] = useState(user);
   const [selectedFile, setSelectedFile] = useState(null);
-
+  const [files, setFiles] = useState([]);
   // ✅ Fetch User Data
   
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const res = await axios.get(`http://localhost:4000/api/user/profile/${userID}`);
-        setUserData(res.data);
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      }
-    };
+  
 
-    if (userID) {
-      fetchUserData();
+  
+
+  useEffect(() => {
+    const fetchFiles = async () => {
+      try {
+        axios.get(`http://localhost:4000/api/file/get-files/${userID}`).then((response) => {
+          console.log(response);
+          
+          setFiles(response.data.files);
+          console.log("Files: ", response.data.files);
+          
+        }).catch((error) => {
+          console.error("Error fetching user files: ", error);
+        })
+      } catch (error) {
+        console.error("Error fetching user data: ", error);
+      }
     }
-  }, [userID]);
+
+    fetchFiles();
+  }, []);
 
   // ✅ Handle File Click to Show Details
   const handleFileClick = (file) => {
@@ -49,12 +58,12 @@ const Profile = () => {
       <main className="profile-container">
         <div className="profile-card">
           <h2>Profile Information</h2>
-          {userData ? (
+          {user ? (
             <>
-              <p><strong>Name:</strong> {userData.name}</p>
-              <p><strong>Email:</strong> {userData.email}</p>
-              <p><strong>Account Created:</strong> {new Date(userData.createdAt).toLocaleDateString()}</p>
-              <p><strong>Total Files Uploaded:</strong> {userData.files.length}</p>
+              <p><strong>Name:</strong> {user.name}</p>
+              <p><strong>Email:</strong> {user.email}</p>
+              <p><strong>Account Created:</strong> {new Date(user.createdAt).toLocaleDateString()}</p>
+              
             </>
           ) : (
             <p>Loading user data...</p>
@@ -64,9 +73,9 @@ const Profile = () => {
         {/* ✅ Uploaded Files Section */}
         <div className="files-card">
           <h2>Uploaded Files</h2>
-          {userData && userData.files.length > 0 ? (
+          {files.length > 0 ? (
             <ul>
-              {userData.files.map((file, index) => (
+              {files.map((file, index) => (
                 <li key={index}>
                   <p><strong>File Name:</strong> {file.fileName}</p>
                   <button onClick={() => handleFileClick(file)}>View Details</button>
@@ -89,7 +98,7 @@ const Profile = () => {
               </a>
             </p>
             <p><strong>Key CID:</strong> {selectedFile.encryptionKeyCID}</p>
-            <p><strong>Timestamp:</strong> {new Date(selectedFile.timestamp).toLocaleString()}</p>
+            <p><strong>Timestamp:</strong> {new Date(selectedFile.createdAt).toLocaleString()}</p>
           </div>
         )}
       </main>
