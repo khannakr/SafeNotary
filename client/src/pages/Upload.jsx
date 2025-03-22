@@ -3,6 +3,7 @@ import axios from "axios";
 import CryptoJS from "crypto-js";
 import "./styles.css";
 import { useUser } from "../context/userContext.jsx"; 
+import { Link } from "react-router-dom"; 
 
 const UploadFile = () => {
   const [file, setFile] = useState(null);
@@ -10,8 +11,8 @@ const UploadFile = () => {
   const [fileHash, setFileHash] = useState("");
   const [encryptedFileCID, setEncryptedFileCID] = useState("");
   const [keyCID, setKeyCID] = useState("");
+
   const { user } = useUser();
-  
   const userID = user ? user._id : null;   // Ensure user ID is properly set
 
   const handleFileChange = (e) => {
@@ -135,43 +136,36 @@ const UploadFile = () => {
 
   return (
     <div>
-      {/* Navigation Bar */}
       <header>
         <nav className="navbar">
           <div className="logo">SafeNotary</div>
           <ul className="nav-links">
             <li><a href="/newhome" className="btn-action">Home</a></li>
+            <li>
+              <Link to="/profile" className="btn-action">Profile</Link>  {/* ✅ Navigate to File page */}
+            </li>
           </ul>
         </nav>
       </header>
 
-      {/* Upload File Section */}
       <main className="upload-container">
         <div className="card">
           <h2>File Notarization</h2>
           <form onSubmit={handleUpload}>
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={handleFileChange}
-              required
-            />
-            <button type="submit" className="upload-btn">Notarize</button>
+            <input type="file" onChange={handleFileChange} required />
+            <button type="submit">Notarize</button>
           </form>
         </div>
 
-        {/* Upload Result */}
         <div className="result-card">
           <h3>Upload Result</h3>
           {uploadMessage && <p>{uploadMessage}</p>}
         </div>
       </main>
-
-      <footer>
-        <p>© 2024 SafeNotary. All rights reserved.</p>
-      </footer>
     </div>
   );
 };
 
 export default UploadFile;
+
+ 
