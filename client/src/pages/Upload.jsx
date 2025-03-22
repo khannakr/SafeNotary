@@ -4,77 +4,61 @@ import CryptoJS from "crypto-js";
 import "./styles.css";
 import { useUser } from "../context/userContext.jsx"; 
 
-const generateSHA256Hash = async (file) => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-
-        reader.onload = () => {
-            const wordArray = CryptoJS.lib.WordArray.create(reader.result);
-            const hash = CryptoJS.SHA256(wordArray).toString(); // Generate SHA-256 hash
-            resolve(hash);
-        };
-
-        reader.onerror = (error) => reject(error);
-        reader.readAsArrayBuffer(file); // Read file as binary
-    });
-};
-
-
 const UploadFile = () => {
   const [file, setFile] = useState(null);
   const [uploadMessage, setUploadMessage] = useState("");
   const [fileHash, setFileHash] = useState("");
-  const [keyHash, setKeyHash] = useState("");
-  const {user} = useUser();
-  // const userID = user._id; 
+  const [encryptedFileCID, setEncryptedFileCID] = useState("");
+  const [keyCID, setKeyCID] = useState("");
+  const { user } = useUser();
   
+  const userID = user ? user._id : null;   // Ensure user ID is properly set
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
   };
 
-  // 🔹 Encryption Function (Directly Inside the Page)
+  // 🔹 Encrypt the File & Generate SHA-256 Hash of the Encrypted File
   const encryptFile = async (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-  
+
       reader.onload = () => {
-        const fileData = new Uint8Array(reader.result); // Read as binary
-  
-        // Generate a random 256-bit AES key (32 bytes)
-        const key = CryptoJS.lib.WordArray.random(32); 
-        const keyBase64 = CryptoJS.enc.Base64.stringify(key); // Store key in Base64
-  
-        // Encrypt the binary data
+        const fileData = new Uint8Array(reader.result);
+
+        // 🔥 Generate a Random 256-bit AES Key
+        const key = CryptoJS.lib.WordArray.random(32);
+        const keyBase64 = CryptoJS.enc.Base64.stringify(key);
+
+        // 🔥 Encrypt the File
         const encrypted = CryptoJS.AES.encrypt(
           CryptoJS.lib.WordArray.create(fileData),
           keyBase64
         ).toString();
-  
-        // Convert encrypted data into a Blob (PDF format)
+
+        // 🔹 Generate the SHA-256 Hash of the Encrypted File
+        const encryptedHash = CryptoJS.SHA256(encrypted).toString();
+        setFileHash(encryptedHash);  // Store the encrypted hash
+
+        // 🔹 Convert to Blob for IPFS Upload
         const encryptedBytes = new TextEncoder().encode(encrypted);
         const encryptedBlob = new Blob([encryptedBytes], { type: "application/pdf" });
-  
-        // Convert key to a Blob
         const keyBlob = new Blob([keyBase64], { type: "text/plain" });
-  
-        // 🔥 Generate the decryption key (same as the encryption key)
-        const decryptionKey = keyBase64;
-  
+
         resolve({
           encryptedFile: encryptedBlob,
           encryptionKey: keyBlob,
-          decryptionKey: decryptionKey,  // Return decryption key
+          encryptedHash: encryptedHash,
+          decryptionKey: keyBase64
         });
       };
-  
+
       reader.onerror = (error) => reject(error);
-      reader.readAsArrayBuffer(file); // Read file as binary
+      reader.readAsArrayBuffer(file);
     });
   };
-  
 
-  // 🔹 Upload to IPFS (Pinata)
+  // 🔹 Upload to IPFS (Fixed Headers)
   const uploadToIPFS = async (fileBlob, fileName) => {
     const formData = new FormData();
     formData.append("file", fileBlob, fileName);
@@ -85,74 +69,69 @@ const UploadFile = () => {
         formData,
         {
           headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiJlMDdkNDAxNy00MDg0LTQ1OWQtOTdlZi1hMzI5MmFjMDNkNGEiLCJlbWFpbCI6ImRpbHByaXlhdGtAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjdjYWFjZTFiZDFjNDhkZTNhZDkyIiwic2NvcGVkS2V5U2VjcmV0IjoiNWZlM2U3NmQ2YmZkODdmZTJmNWZiMDc2NjNlNDZlMTIxZmIyMWIwMGZmZjdkYTVkYTJkOWU0MWRhNGE3NDlhMiIsImV4cCI6MTc3MzczMzk1Nn0.t6GyAe2bwtjih7mJCz1FR2sgoug3pftBCxj6a_a6kpI`, // Replace with your API Key
-          },
+            "pinata_api_key": import.meta.env.VITE_PINATA_API_KEY,     // ✅ Load from .env
+            "pinata_secret_api_key": import.meta.env.VITE_PINATA_SECRET_API_KEY  // ✅ Load from .env
+          }
         }
       );
       return response.data.IpfsHash;
     } catch (error) {
-      console.error("IPFS upload error:", error);
+      console.error("IPFS Upload Error:", error.response ? error.response.data : error.message);
       return null;
     }
   };
 
-  // 🔹 Encrypt & Upload Button Handler
+  // 🔹 Handle Upload
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!file) {
-        setUploadMessage("Please select a file to upload.");
-        return;
+      setUploadMessage("Please select a file to upload.");
+      return;
     }
 
-    setUploadMessage("Computing file hash, encrypting, and uploading...");
+    setUploadMessage("Encrypting file, generating hash, and uploading...");
 
     try {
-        // Step 1: Generate SHA-256 hash before encryption
-        const fileHash = await generateSHA256Hash(file);
-        console.log("SHA-256 Hash:", fileHash); // Debugging output
+      // 🔥 Step 1: Encrypt the file and get its hash
+      const { encryptedFile, encryptionKey, encryptedHash, decryptionKey } = await encryptFile(file);
 
-        // Step 2: Encrypt the file
-        const { encryptedFile, encryptionKey, decryptionKey } = await encryptFile(file);
+      // 🔥 Step 2: Upload the encrypted file to IPFS
+      const encryptedFileCID = await uploadToIPFS(encryptedFile, `encrypted_${file.name}`);
+      if (!encryptedFileCID) throw new Error("Failed to upload encrypted file.");
 
-        // Step 3: Upload the encrypted file to IPFS
-        const encryptedFileCID = await uploadToIPFS(encryptedFile, "encrypted_" + file.name);
-        if (!encryptedFileCID) throw new Error("Failed to upload encrypted file.");
+      // 🔥 Step 3: Upload the encryption key to IPFS
+      const keyCID = await uploadToIPFS(encryptionKey, `key_${file.name}.txt`);
+      if (!keyCID) throw new Error("Failed to upload encryption key.");
 
-        // Step 4: Upload the encryption key to IPFS
-        const encryptionKeyCID = await uploadToIPFS(encryptionKey, "key_" + file.name + ".txt");
-        if (!encryptionKeyCID) throw new Error("Failed to upload encryption key.");
-
-        // Step 5: Store IPFS CIDs and hash in state (For display/logging)
-        setFileHash(fileHash);
-
-        const res = await fetch("http://localhost:4000/api/file/new-file", {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            userId: userID,
-            pdf_url: "shdhfkksjdfsjdfk",
-            hash: fileHash,
-            encryptedFileCID: encryptedFileCID,
-            decryptionKey: decryptionKey
-          })
+      // 🔥 Step 4: Store the data in the backend (Corrected Backend URL)
+      const res = await fetch("http://localhost:4000/api/file/new-file", {  // ✅ Corrected Backend Port
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          userId: userID,
+          pdf_url: `https://gateway.pinata.cloud/ipfs/${encryptedFileCID}`,
+          hash: encryptedHash,
+          encryptedFileCID: encryptedFileCID,
+          encryptionKeyCID: keyCID,
+          decryptionKey: decryptionKey
         })
-        const data = await res.json();
-        console.log(data);
-        
-        
-        setUploadMessage("File uploaded successfully!");
+      });
 
-        console.log("✅ File Hash:", fileHash);
-        console.log("📄 Encrypted File CID:", encryptedFileCID);
-        console.log("🔑 Encryption Key CID:", encryptionKeyCID);
+      const data = await res.json();
+      console.log("Backend Response:", data);
+
+      // 🔥 Store CIDs in State
+      setEncryptedFileCID(encryptedFileCID);
+      setKeyCID(keyCID);
+
+      setUploadMessage("✅ File uploaded successfully!");
     } catch (error) {
-        console.error("Error during encryption/upload:", error);
-        setUploadMessage("Error uploading file to IPFS.");
+      console.error("Error during encryption/upload:", error);
+      setUploadMessage("❌ Error uploading file.");
     }
-};
+  };
 
   return (
     <div>
@@ -169,7 +148,7 @@ const UploadFile = () => {
       {/* Upload File Section */}
       <main className="upload-container">
         <div className="card">
-          <h2>Upload & Encrypt File</h2>
+          <h2>File Notarization</h2>
           <form onSubmit={handleUpload}>
             <input
               type="file"
@@ -177,34 +156,17 @@ const UploadFile = () => {
               onChange={handleFileChange}
               required
             />
-            <button type="submit" className="upload-btn">Encrypt & Upload</button>
+            <button type="submit" className="upload-btn">Notarize</button>
           </form>
         </div>
 
         {/* Upload Result */}
         <div className="result-card">
-        {fileHash && (
-    <p>
-      🔍 File SHA-256 Hash: <br />
-      <span style={{ wordBreak: "break-all" }}>{fileHash}</span>
-    </p>
-)}
-
           <h3>Upload Result</h3>
           {uploadMessage && <p>{uploadMessage}</p>}
-          {fileHash && (
-            <p>
-              📄 Encrypted File: 
-              <a href={`https://gateway.pinata.cloud/ipfs/${fileHash}`} target="_blank" rel="noopener noreferrer">
-                {fileHash}
-              </a>
-            </p>
-          )}
-          
         </div>
       </main>
 
-      {/* Footer */}
       <footer>
         <p>© 2024 SafeNotary. All rights reserved.</p>
       </footer>
