@@ -21,6 +21,10 @@ const fileSchema = new mongoose.Schema({
         type: String,        
         required: true
     },
+    filename: {
+        type: String,
+        required: true
+    }
 }, { timestamps: true });   // Adds createdAt and updatedAt fields automatically
 
 // Create the model named "File"

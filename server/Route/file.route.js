@@ -3,13 +3,14 @@ const router = express.Router();
 import File from '../model/file.model.js';
 router.post("/new-file", async (req, res) => {
     try{
-        const { userId, pdf_url, hash, encryptedFileCID, decryptionKey } = req.body;
+        const { userId, pdf_url, hash, encryptedFileCID, decryptionKey, filename } = req.body;
         const newFile = new File({
             userId, 
             pdf_url,
             hash,
             encryptedFileCID,
-            decryptionKey
+            decryptionKey,
+            filename
         })
         await newFile.save();
         

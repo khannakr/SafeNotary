@@ -116,7 +116,8 @@ const UploadFile = () => {
           hash: encryptedHash,
           encryptedFileCID: encryptedFileCID,
           encryptionKeyCID: keyCID,
-          decryptionKey: decryptionKey
+          decryptionKey: decryptionKey,
+          filename: file.name
         })
       });
 

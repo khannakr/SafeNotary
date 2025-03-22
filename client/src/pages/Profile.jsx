@@ -91,7 +91,7 @@ const Profile = () => {
         {selectedFile && (
           <div className="file-details-card">
             <h2>File Details</h2>
-            <p><strong>File Name:</strong> {selectedFile.fileName}</p>
+            <p><strong>File Name:</strong> {selectedFile.filename}</p>
             <p><strong>IPFS Link:</strong> 
               <a href={`https://gateway.pinata.cloud/ipfs/${selectedFile.encryptedFileCID}`} target="_blank" rel="noopener noreferrer">
                 {selectedFile.encryptedFileCID}
