@@ -8,26 +8,27 @@ const router = express.Router();
 // Smart contract details
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
 const CONTRACT_ABI = [
-    "function getFileProof(string memory _cid) public view returns (string memory, string memory, uint256)"
+    "function getFileByName(string memory _fileName) public view returns (string memory, string memory, string memory, uint256)"
 ];
 
-router.get("/fetch-data/:cid", async (req, res) => {
-    const { cid } = req.params;
+router.get("/fetch-data/:fileName", async (req, res) => {
+    const { fileName } = req.params;
 
     try {
-        const provider = new ethers.JsonRpcProvider(process.env.AL_URL);
+        const provider = new ethers.JsonRpcProvider(process.env.ALCHEMY_API_URL);
         const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
         const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
 
-        console.log(`Fetching data for CID: ${cid}...`);
+        console.log(`Fetching data for File Name: ${fileName}...`);
 
         // Fetch CID, ZKP, and timestamp
-        const [fetchedCid, zkp, timestamp] = await contract.getFileProof(cid);
+        const [fetchedFileName, Cid, zkp, timestamp] = await contract.getFileByName(fileName);
 
         // Format response
         const responseData = {
-            cid: fetchedCid,
-            zkp: ethers.toBeHex(zkp),
+            fileName: fetchedFileName,
+            cid: Cid,
+            zkp: zkp,
             timestamp: new Date(timestamp * 1000).toLocaleString()
         };
 
