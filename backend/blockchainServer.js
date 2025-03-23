@@ -15,7 +15,7 @@ const provider = new ethers.providers.JsonRpcProvider(process.env.ALCHEMY_API_UR
 const signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 const contract = new ethers.Contract(contractAddress, abi, signer);
 
-// API to Store CID, ZKP & Timestamp in Smart Contract
+// API to Store CID, ZKP & Timesatamp in Smart Contract
 app.post("/notarize", async (req, res) => {
     try {
         const { cid, zkp } = req.body;
