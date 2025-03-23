@@ -2,19 +2,20 @@ import React, { useState } from "react";
 import "./styles.css"; // Ensure your styles are linked correctly
 
 const VerifyNotarization = () => {
-  const [identifier, setIdentifier] = useState("");
+  const [fileName, setFileName] = useState("");
   const [verificationResult, setVerificationResult] = useState("");
 
   const handleVerify = () => {
     // Simulate the verification process (you can replace this with your actual logic)
-    if (identifier) {
-      setVerificationResult("Notarization details for the given identifier.");
+    if (fileName) {
+    setVerificationResult(`Notarization details for the given file:${fileName}`);
     } else {
-      setVerificationResult("No result to display. Enter a valid identifier to see notarization details.");
+      setVerificationResult("No result to display.Enter a valid file to see notarization details.");
     }
   };
 
   return (
+
     <div>
       {/* Navigation Bar */}
       <header>
@@ -30,13 +31,14 @@ const VerifyNotarization = () => {
       <main className="verify-container">
         <div className="card">
           <h2>Verify Notarization</h2>
-          <p>Enter the unique identifier or hash provided during notarization to verify the authenticity of your file.</p>
-          <label htmlFor="identifier">Unique Identifier /</label>
+          <p>Enter the file name to verify the authenticity of your notarized file.</p>
+          <label htmlFor="fileName">File Name /</label>
           <input
-            type="file"
-            id="file"
-            name="file"
-            accept=".pdf"
+            type="text"
+            id="fileName"
+            name="fileName"
+            placeholder="Enter file name"
+            onChange={(e) => setFileName(e.target.value)}
             required
           />
 
