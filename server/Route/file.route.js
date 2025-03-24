@@ -13,11 +13,26 @@ const signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 const contractAddress = process.env.CONTRACT_ADDRESS;
 
 // ✅ ABI for the contract
-const abi = [
-  "function storeProof(string memory _fileName, string memory _cid, string memory _zkp, uint256 _timestamp) public"
-];
+// const abi = [
+//   "function storeProof(string memory _fileName, string memory _cid, string memory _zkp, uint256 _timestamp) public"
+// ];
 
-const contract = new ethers.Contract(contractAddress, abi, signer);
+
+const contractABI = [
+  {
+      "inputs": [{"internalType": "string", "name": "_fileName", "type": "string"}],
+      "name": "getFileProof",
+      "outputs": [
+          {"internalType": "string", "name": "fileName", "type": "string"},
+          {"internalType": "string", "name": "cid", "type": "string"},
+          {"internalType": "string", "name": "zkp", "type": "string"},
+          {"internalType": "uint256", "name": "timestamp", "type": "uint256"}
+      ],
+      "stateMutability": "view",
+      "type": "function"
+  }
+];
+const contract = new ethers.Contract(contractAddress, contractABI, signer);
 
 // 🔥 Store File in MongoDB & Ethereum
 router.post("/new-file", async (req, res) => {
@@ -82,19 +97,21 @@ router.get("/verify/:fileName", async (req, res) => {
   try {
       const result = await contract.getFileProof(fileName);
 
-      // Handle empty results
       if (!result || result.length < 4 || !result[0]) {
           return res.status(404).json({ valid: false, message: "File not found on blockchain" });
       }
 
       const [storedFileName, cid, zkp, timestamp] = result;
 
+      // ✅ Explicitly convert BigInt to Number
+      const convertedTimestamp = Number(timestamp);
+
       res.json({
           valid: true,
           fileName: storedFileName,
           cid,
           zkp,
-          timestamp: new Date(timestamp * 1000).toISOString()
+          timestamp: new Date(convertedTimestamp * 1000).toISOString()
       });
 
   } catch (error) {
@@ -102,5 +119,6 @@ router.get("/verify/:fileName", async (req, res) => {
       res.status(500).json({ valid: false, message: "Error retrieving file from blockchain" });
   }
 });
+
 
 export default router;
