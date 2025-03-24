@@ -1,7 +1,7 @@
 import React from "react";
 import "./styles.css"; // Ensure your styles are linked correctly
 import { useUser } from "../context/userContext";
-
+import { Link } from "react-router-dom";
 const Home = () => {
   const {user} = useUser();
   console.log(user);
@@ -13,6 +13,9 @@ const Home = () => {
         <nav className="navbar">
           <div className="logo">SafeNotary</div>
           <ul className="nav-links">
+          <li>
+              <Link to="/profile" className="btn-action">Profile</Link>  {/* ✅ Navigate to File page */}
+          </li>
             {/* You can add navigation links here if needed */}
           </ul>
         </nav>

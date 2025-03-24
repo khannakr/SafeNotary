@@ -12,17 +12,11 @@ const Profile = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [files, setFiles] = useState([]);
   // ✅ Fetch User Data
-  
-  
-
-  
-
-  useEffect(() => {
+   useEffect(() => {
     const fetchFiles = async () => {
       try {
-        axios.get(`http://localhost:4000/api/file/get-files/${userID}`).then((response) => {
+        axios.get(`http://localhost:4000/api/file/get/${userID}`).then((response) => {
           console.log(response);
-          
           setFiles(response.data.files);
           console.log("Files: ", response.data.files);
           

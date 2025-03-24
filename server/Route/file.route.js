@@ -1,20 +1,20 @@
 import express from "express";
 import File from "../model/file.model.js";
-import { ethers } from "ethers";
+import { ethers, verifyMessage } from "ethers";
 import dotenv from "dotenv";
 
 dotenv.config({ path: "../blockchain/.env" });  // ✅ Load Ethereum environment variables
 
 const router = express.Router();
 
-// Initialize Ethereum connection
+// ✅ Initialize Ethereum connection
 const provider = new ethers.JsonRpcProvider(process.env.ALCHEMY_API_URL);
 const signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 const contractAddress = process.env.CONTRACT_ADDRESS;
 
-// ABI for the contract
+// ✅ ABI for the contract
 const abi = [
-  "function storeProof(string memory _fileName, string memory _cid, string memory _zkp, uint256 _timestamp) public",
+  "function storeProof(string memory _fileName, string memory _cid, string memory _zkp, uint256 _timestamp) public"
 ];
 
 const contract = new ethers.Contract(contractAddress, abi, signer);
@@ -45,6 +45,8 @@ router.post("/new-file", async (req, res) => {
     await tx.wait();
     console.log("✅ Data stored successfully on Ethereum! TX Hash:", tx.hash);
 
+  console.log(tx);
+
     res.send({
       ok: true,
       file: newFile,
@@ -67,6 +69,37 @@ router.get('/get/:userId', async (req, res) => {
   } catch (error) {
     console.log(error);
     res.status(500).send({ ok: false, message: error.message });
+  }
+});
+
+// ✅ Verification Route (Fetch from Ethereum)
+
+router.get("/verify/:fileName", async (req, res) => {
+  const { fileName } = req.params;
+
+  console.log(`📦 Verifying file: ${fileName}...`);
+
+  try {
+      const result = await contract.getFileProof(fileName);
+
+      // Handle empty results
+      if (!result || result.length < 4 || !result[0]) {
+          return res.status(404).json({ valid: false, message: "File not found on blockchain" });
+      }
+
+      const [storedFileName, cid, zkp, timestamp] = result;
+
+      res.json({
+          valid: true,
+          fileName: storedFileName,
+          cid,
+          zkp,
+          timestamp: new Date(timestamp * 1000).toISOString()
+      });
+
+  } catch (error) {
+      console.error("❌ Verification Error:", error);
+      res.status(500).json({ valid: false, message: "Error retrieving file from blockchain" });
   }
 });
 
