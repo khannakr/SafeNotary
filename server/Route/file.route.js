@@ -246,6 +246,21 @@ router.post('/submit-hash', (req, res) => {
                 
                 console.log('✅ Proof generated:', stdout);
 
+                // Read and return the proof.json to frontend
+                try {
+                    const proofData = fs.readFileSync(outputPath, 'utf8');
+                    const publicData = fs.readFileSync(publicPath, 'utf8');
+                    
+                    return res.status(200).json({
+                        message: 'Proof generated successfully',
+                        proof: JSON.parse(proofData),
+                        public: JSON.parse(publicData)
+                    });
+                } catch (readErr) {
+                    console.error('❌ Error reading proof file:', readErr);
+                    return res.status(500).json({ error: 'Error reading proof file' });
+                }
+
                 // Step 3: Verify proof
                 // const verifyCommand = `snarkjs groth16 verify "${vkeyPath}" "${publicPath}" "${outputPath}"`;
                 // exec(verifyCommand, (verifyErr, verifyStdout, verifyStderr) => {
