@@ -90,6 +90,7 @@ const UploadFile = () => {
       return;
     }
 
+    
     setUploadMessage("Encrypting file, generating hash, and uploading...");
 
     try {

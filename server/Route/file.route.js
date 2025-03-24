@@ -46,6 +46,7 @@ router.post("/new-file", async (req, res) => {
     const { userId, pdf_url, hash, encryptedFileCID, decryptionKey, filename } = req.body;
 
     // 🔥 Step 1: Store in MongoDB
+
     const newFile = new File({
       userId,
       pdf_url,
@@ -60,10 +61,9 @@ router.post("/new-file", async (req, res) => {
     generateProof(hash);
 
     // 🔥 Step 2: Store on Ethereum
-    const timestamp = Math.floor(Date.now() / 1000);  // Get current timestamp
+    const timestamp = Math.floor(Date.now() / 1000);  
 
     console.log("📩 Sending data to blockchain...");
-
     const tx = await contract.storeProof(filename, encryptedFileCID, hash, timestamp);
     await tx.wait();
     console.log("✅ Data stored successfully on Ethereum! TX Hash:", tx.hash);
@@ -96,7 +96,6 @@ router.get('/get/:userId', async (req, res) => {
 });
 
 // ✅ Verification Route (Fetch from Ethereum)
-
 router.get("/verify/:fileName", async (req, res) => {
   const { fileName } = req.params;
 
@@ -145,18 +144,9 @@ function generateProof(hash) {
         const inputPath = path.join(proofsDir, 'input.json');
         const witnessPath = path.join(proofsDir, 'witness.wtns');
         
-        // Convert hash to a numeric format if it's not already
-        // This assumes the circuit expects a numeric input
-        let numericHash;
-        
-        try {
-            // First try to convert directly to number if it's already numeric
-            numericHash = BigInt(hash).toString();
-        } catch (e) {
-            // If hash is a string, convert to a simple numeric representation
-            // Use a sum of character codes for simplicity
-            numericHash = Array.from(hash).reduce((acc, char) => acc + char.charCodeAt(0), 0).toString();
-        }
+        // Consistent hash conversion method using a more deterministic approach
+        // Using a fixed hash conversion method to ensure consistency
+        const numericHash = convertHashToNumeric(hash);
         
         // Write the properly formatted input to the file
         fs.writeFileSync(inputPath, JSON.stringify({ 
@@ -176,8 +166,10 @@ function generateProof(hash) {
             }
             console.log('✅ Witness generated successfully');
             
-            // Once witness is generated, create the proof
-            const proveCommand = `snarkjs groth16 prove "${zkeyPath}" "${witnessPath}" "${path.join(proofsDir, 'proof.json')}" "${path.join(proofsDir, 'public.json')}"`;
+            // Once witness is generated, create the proof with entropy seed for deterministic output
+            // Add a deterministic entropy seed based on the hash itself
+            const entropySeed = hash.substring(0, 10); // Use part of the hash as entropy seed
+            const proveCommand = `snarkjs groth16 prove "${zkeyPath}" "${witnessPath}" "${path.join(proofsDir, 'proof.json')}" "${path.join(proofsDir, 'public.json')}" --entropy="${entropySeed}"`;
             exec(proveCommand, (err, stdout, stderr) => {
                 if (err) {
                     console.error('❌ Error during proof generation:', stderr);
@@ -189,6 +181,30 @@ function generateProof(hash) {
     } catch (error) {
         console.error('❌ Error in generateProof:', error);
     }
+}
+
+// Helper function to ensure consistent hash conversion
+function convertHashToNumeric(hash) {
+    // If the hash is already a valid hex string, convert it to a decimal number as string
+    if (/^0x[0-9a-f]+$/i.test(hash)) {
+        try {
+            // Modulo to keep the number within a reasonable range for the circuit
+            return (BigInt(hash) % BigInt(2**64)).toString();
+        } catch (e) {
+            console.log('Error converting hex to BigInt, falling back to alternative method');
+        }
+    }
+    
+    // Consistent hashing approach: take the first 8 bytes and convert to number
+    // This ensures the same hash always converts to the same numeric value
+    let numericValue = 0;
+    const bytesToUse = Math.min(8, hash.length);
+    
+    for (let i = 0; i < bytesToUse; i++) {
+        numericValue = (numericValue * 256) + hash.charCodeAt(i);
+    }
+    
+    return numericValue.toString();
 }
 
 // POST route to handle hash submission and proof generation
@@ -206,17 +222,8 @@ router.post('/submit-hash', (req, res) => {
         const publicPath = path.join(proofsDir, 'public.json');
         const witnessPath = path.join(proofsDir, 'witness.wtns');
 
-        // Convert hash to a numeric format if it's not already
-        let numericHash;
-        
-        try {
-            // First try to convert directly to number if it's already numeric
-            numericHash = BigInt(hash).toString();
-        } catch (e) {
-            // If hash is a string, convert to a simple numeric representation
-            // Use a sum of character codes for simplicity
-            numericHash = Array.from(hash).reduce((acc, char) => acc + char.charCodeAt(0), 0).toString();
-        }
+        // Use the consistent hash conversion function
+        const numericHash = convertHashToNumeric(hash);
         
         // Write the properly formatted input to the file
         fs.writeFileSync(inputPath, JSON.stringify({ 
@@ -236,8 +243,10 @@ router.post('/submit-hash', (req, res) => {
             
             console.log('✅ Witness generated:', witnessStdout);
             
-            // Step 2: Generate proof
-            const proveCommand = `snarkjs groth16 prove "${zkeyPath}" "${witnessPath}" "${outputPath}" "${publicPath}"`;
+            // Step 2: Generate proof with deterministic entropy seed
+            // Using part of the hash itself as the entropy seed ensures consistent results
+            const entropySeed = hash.substring(0, 10);
+            const proveCommand = `snarkjs groth16 prove "${zkeyPath}" "${witnessPath}" "${outputPath}" "${publicPath}" --entropy="${entropySeed}"`;
             exec(proveCommand, (err, stdout, stderr) => {
                 if (err) {
                     console.error('❌ Error during proof generation:', stderr);
@@ -245,7 +254,6 @@ router.post('/submit-hash', (req, res) => {
                 }
                 
                 console.log('✅ Proof generated:', stdout);
-
                 // Read and return the proof.json to frontend
                 try {
                     const proofData = fs.readFileSync(outputPath, 'utf8');
@@ -260,18 +268,6 @@ router.post('/submit-hash', (req, res) => {
                     console.error('❌ Error reading proof file:', readErr);
                     return res.status(500).json({ error: 'Error reading proof file' });
                 }
-
-                // Step 3: Verify proof
-                // const verifyCommand = `snarkjs groth16 verify "${vkeyPath}" "${publicPath}" "${outputPath}"`;
-                // exec(verifyCommand, (verifyErr, verifyStdout, verifyStderr) => {
-                //     if (verifyErr) {
-                //         console.error('❌ Error during verification:', verifyStderr);
-                //         return res.status(500).json({ error: 'Proof verification failed', details: verifyStderr });
-                //     }
-
-                //     console.log('✅ Verification successful:', verifyStdout);
-                //     return res.status(200).json({ message: 'Proof verified successfully', output: verifyStdout });
-                // });
             });
         });
     } catch (error) {
