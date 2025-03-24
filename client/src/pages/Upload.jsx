@@ -17,6 +17,7 @@ const UploadFile = () => {
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
+    //checking whether the filename is already used
   };
 
   // 🔹 Encrypt the File & Generate SHA-256 Hash of the Encrypted File
