@@ -1,6 +1,8 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import "./styles.css"; // Ensure your styles are linked correctly.
 import { useUser } from "../context/userContext";
+
 const Home = () => {
   const { user } = useUser();
 
@@ -27,12 +29,12 @@ const Home = () => {
 
         <div className="action-buttons">
           {/* Buttons to navigate */}
-          <a href="login" className="btn-action">
+          <Link to="/login" className="btn-action">
             Get Started
-          </a>
-          <a href="verify" className="btn-action">
+          </Link>
+          <Link to="/about" className="btn-action">
             Learn More
-          </a>
+          </Link>
         </div>
       </main>
 
