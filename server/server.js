@@ -1,10 +1,11 @@
 import express from "express";
 import mongoose from "mongoose";
 import userRouter from "./Route/auth.route.js";
-import cors from 'cors' // imppppppppp
+import cors from 'cors' 
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import fileRouter from "./Route/file.route.js";
+import fetchDataRouter from "./Route/getFileData.route.js";
 
 dotenv.config();
 const app = express();
@@ -21,9 +22,8 @@ mongoose.connect("mongodb://localhost:27017/", {
 .catch((error) => console.error("MongoDB connection error:", error));
 
 app.use('/api/auth', userRouter);
-app.use('/api/file', fileRouter)
-
-
+app.use('/api/file', fileRouter);
+app.use('/api/fetch', fetchDataRouter);
   
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}..`);
