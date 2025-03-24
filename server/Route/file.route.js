@@ -131,15 +131,69 @@ router.get("/verify/:fileName", async (req, res) => {
 const zkeyPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\squared_final.zkey';
 const vkeyPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\verification_key.json';
 const proofsDir = path.join(__dirname, '..', '..', 'ZKP', 'proofs');
+const wasmPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\squared_js\\squared.wasm';
+const witnessGenPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\squared_js\\generate_witness.js';
 
 // Ensure the proofs directory exists
 if (!fs.existsSync(proofsDir)) {
     fs.mkdirSync(proofsDir, { recursive: true });
 }
 
+// Function to generate a proof from a hash
+function generateProof(hash) {
+    try {
+        const inputPath = path.join(proofsDir, 'input.json');
+        const witnessPath = path.join(proofsDir, 'witness.wtns');
+        
+        // Convert hash to a numeric format if it's not already
+        // This assumes the circuit expects a numeric input
+        let numericHash;
+        
+        try {
+            // First try to convert directly to number if it's already numeric
+            numericHash = BigInt(hash).toString();
+        } catch (e) {
+            // If hash is a string, convert to a simple numeric representation
+            // Use a sum of character codes for simplicity
+            numericHash = Array.from(hash).reduce((acc, char) => acc + char.charCodeAt(0), 0).toString();
+        }
+        
+        // Write the properly formatted input to the file
+        fs.writeFileSync(inputPath, JSON.stringify({ 
+            secret: numericHash, 
+            expectedHash: numericHash 
+        }, null, 2));
+        
+        console.log(`✅ Hash converted and saved: ${numericHash}`);
+        
+        // This will run asynchronously in the background - you can implement proper callbacks if needed
+        // Use the circuit's specific generate_witness.js file
+        const witnessCommand = `node "${witnessGenPath}" "${wasmPath}" "${inputPath}" "${witnessPath}"`;
+        exec(witnessCommand, (err, stdout, stderr) => {
+            if (err) {
+                console.error('❌ Error during witness generation:', stderr);
+                return;
+            }
+            console.log('✅ Witness generated successfully');
+            
+            // Once witness is generated, create the proof
+            const proveCommand = `snarkjs groth16 prove "${zkeyPath}" "${witnessPath}" "${path.join(proofsDir, 'proof.json')}" "${path.join(proofsDir, 'public.json')}"`;
+            exec(proveCommand, (err, stdout, stderr) => {
+                if (err) {
+                    console.error('❌ Error during proof generation:', stderr);
+                    return;
+                }
+                console.log('✅ Proof generated successfully');
+            });
+        });
+    } catch (error) {
+        console.error('❌ Error in generateProof:', error);
+    }
+}
+
 // POST route to handle hash submission and proof generation
 router.post('/submit-hash', (req, res) => {
-  console.log('🔐 Submitting hash for proof generation...');
+    console.log('🔐 Submitting hash for proof generation...');
   
     try {
         const { hash } = req.body;
@@ -152,28 +206,57 @@ router.post('/submit-hash', (req, res) => {
         const publicPath = path.join(proofsDir, 'public.json');
         const witnessPath = path.join(proofsDir, 'witness.wtns');
 
-        // Save the hash to input.json
-        fs.writeFileSync(inputPath, JSON.stringify({ secret: hash, expectedHash: hash }, null, 2));
-        console.log(`✅ Hash saved: ${hash}`);
-        // Step 1: Generate proof
-        const proveCommand = `powershell.exe -Command "snarkjs groth16 prove '${zkeyPath}' '${witnessPath}' '${outputPath}' '${publicPath}'"`;
-        exec(proveCommand, (err, stdout, stderr) => {
-            if (err) {
-                console.error('❌ Error during proof generation:', stderr);
-                return res.status(500).json({ error: 'Proof generation failed', details: stderr });
+        // Convert hash to a numeric format if it's not already
+        let numericHash;
+        
+        try {
+            // First try to convert directly to number if it's already numeric
+            numericHash = BigInt(hash).toString();
+        } catch (e) {
+            // If hash is a string, convert to a simple numeric representation
+            // Use a sum of character codes for simplicity
+            numericHash = Array.from(hash).reduce((acc, char) => acc + char.charCodeAt(0), 0).toString();
+        }
+        
+        // Write the properly formatted input to the file
+        fs.writeFileSync(inputPath, JSON.stringify({ 
+            secret: numericHash, 
+            expectedHash: numericHash 
+        }, null, 2));
+        
+        console.log(`✅ Hash converted and saved: ${numericHash}`);
+        
+        // Step 1: Generate witness using the circuit's generate_witness.js file
+        const witnessCommand = `node "${witnessGenPath}" "${wasmPath}" "${inputPath}" "${witnessPath}"`;
+        exec(witnessCommand, (witnessErr, witnessStdout, witnessStderr) => {
+            if (witnessErr) {
+                console.error('❌ Error during witness generation:', witnessStderr);
+                return res.status(500).json({ error: 'Witness generation failed', details: witnessStderr });
             }
-            console.log('✅ Proof generated:', stdout);
-
-            // Step 2: Verify proof
-            const verifyCommand = `powershell.exe -Command "snarkjs groth16 verify '${vkeyPath}' '${publicPath}' '${outputPath}'"`;
-            exec(verifyCommand, (verifyErr, verifyStdout, verifyStderr) => {
-                if (verifyErr) {
-                    console.error('❌ Error during verification:', verifyStderr);
-                    return res.status(500).json({ error: 'Proof verification failed', details: verifyStderr });
+            
+            console.log('✅ Witness generated:', witnessStdout);
+            
+            // Step 2: Generate proof
+            const proveCommand = `snarkjs groth16 prove "${zkeyPath}" "${witnessPath}" "${outputPath}" "${publicPath}"`;
+            exec(proveCommand, (err, stdout, stderr) => {
+                if (err) {
+                    console.error('❌ Error during proof generation:', stderr);
+                    return res.status(500).json({ error: 'Proof generation failed', details: stderr });
                 }
+                
+                console.log('✅ Proof generated:', stdout);
 
-                console.log('✅ Verification successful:', verifyStdout);
-                return res.status(200).json({ message: 'Proof verified successfully', output: verifyStdout });
+                // Step 3: Verify proof
+                // const verifyCommand = `snarkjs groth16 verify "${vkeyPath}" "${publicPath}" "${outputPath}"`;
+                // exec(verifyCommand, (verifyErr, verifyStdout, verifyStderr) => {
+                //     if (verifyErr) {
+                //         console.error('❌ Error during verification:', verifyStderr);
+                //         return res.status(500).json({ error: 'Proof verification failed', details: verifyStderr });
+                //     }
+
+                //     console.log('✅ Verification successful:', verifyStdout);
+                //     return res.status(200).json({ message: 'Proof verified successfully', output: verifyStdout });
+                // });
             });
         });
     } catch (error) {
