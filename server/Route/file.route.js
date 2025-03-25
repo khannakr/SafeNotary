@@ -33,12 +33,38 @@ if (!fs.existsSync(proofsDir)) {
 
 
 // ✅ ABI for the contract
-// const abi = [
+// const contractABI = [
 //   "function storeProof(string memory _fileName, string memory _cid, string memory _zkp, uint256 _timestamp) public"
+// ];
+// const contractABI = [
+//   {
+//     "inputs": [{ "internalType": "string", "name": "_fileName", "type": "string" }],
+//     "name": "getFileProof",
+//     "outputs": [
+//       { "internalType": "string", "name": "fileName", "type": "string" },
+//       { "internalType": "string", "name": "cid", "type": "string" },
+//       { "internalType": "string", "name": "zkp", "type": "string" },
+//       { "internalType": "uint256", "name": "timestamp", "type": "uint256" }
+//     ],
+//     "stateMutability": "view",
+//     "type": "function"
+//   }
 // ];
 
 
 const contractABI = [
+  {
+    "inputs": [
+      { "internalType": "string", "name": "_fileName", "type": "string" },
+      { "internalType": "string", "name": "_cid", "type": "string" },
+      { "internalType": "string", "name": "_zkp", "type": "string" },
+      { "internalType": "uint256", "name": "_timestamp", "type": "uint256" }
+    ],
+    "name": "storeProof",
+    "outputs": [],
+    "stateMutability": "public",
+    "type": "function"
+  },
   {
     "inputs": [{ "internalType": "string", "name": "_fileName", "type": "string" }],
     "name": "getFileProof",
@@ -52,6 +78,8 @@ const contractABI = [
     "type": "function"
   }
 ];
+
+
 const contract = new ethers.Contract(contractAddress, contractABI, signer);
 
 // 🔥 Store File in MongoDB & Ethereum
