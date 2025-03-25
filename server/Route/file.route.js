@@ -129,6 +129,7 @@ router.post("/new-file", async (req, res) => {
   }
 });
 
+
 // 🔥 Retrieve Files from MongoDB
 router.get('/get/:userId', async (req, res) => {
   const userId = req.params.userId;
@@ -138,7 +139,7 @@ router.get('/get/:userId', async (req, res) => {
   } catch (error) {
     console.log(error);
     res.status(500).send({ ok: false, message: error.message });
-  }
+  } 
 });
 
 // ✅ Verification Route (Fetch from Ethereum)
@@ -148,25 +149,31 @@ router.get("/verify/:fileName", async (req, res) => {
   console.log(`📦 Verifying file: ${fileName}...`);
 
   try {
+    const fileResult = await File.find({filename: fileName});
     const result = await contract.getFileProof(fileName);
-
-    if (!result || result.length < 4 || !result[0]) {
+    const fileZkp = fileResult ?  fileResult[0].zkp : null;
+    
+    if (!result || result.length < 4 || !result[0] || !fileZkp) {
       return res.status(404).json({ valid: false, message: "File not found on blockchain" });
     }
 
     const [storedFileName, cid, zkp, timestamp] = result;
 
-    // ✅ Explicitly convert BigInt to Number
-    const convertedTimestamp = Number(timestamp);
-
-    res.json({
-      valid: true,
-      fileName: storedFileName,
-      cid,
-      zkp,
-      timestamp: new Date(convertedTimestamp * 1000).toISOString()
-    });
-
+    if(zkp === fileZkp) {
+      const convertedTimestamp = Number(timestamp);
+      res.json({
+        valid: true,
+        fileName: storedFileName,
+        cid,
+        zkp,
+        timestamp: new Date(convertedTimestamp * 1000).toISOString()
+      });
+    } else {
+      res.json({
+        valid: false,
+        message: "File not verified"
+    })
+    }
   } catch (error) {
     console.error("❌ Verification Error:", error);
     res.status(500).json({ valid: false, message: "Error retrieving file from blockchain" });
