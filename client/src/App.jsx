@@ -6,6 +6,7 @@ import Newhome from './pages/Newhome';
 import Upload from './pages/Upload';
 import Verify from './pages/Verify';
 import Profile from './pages/Profile';
+import About from './pages/About';
 
 export default function App() {
   return <BrowserRouter>
@@ -17,7 +18,7 @@ export default function App() {
     <Route path="/upload" element={<Upload />} />
     <Route path="/verify" element={<Verify />} />
     <Route path="/profile" element={<Profile />} />
-
+    <Route path="/about" element={<About />} />
   </Routes>
   </BrowserRouter>
 }
