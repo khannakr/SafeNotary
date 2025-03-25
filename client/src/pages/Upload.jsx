@@ -91,6 +91,7 @@ const UploadFile = () => {
       return;
     }
 
+    
     setUploadMessage("Encrypting file, generating hash, and uploading...");
 
     try {
@@ -105,7 +106,20 @@ const UploadFile = () => {
       const keyCID = await uploadToIPFS(encryptionKey, `key_${file.name}.txt`);
       if (!keyCID) throw new Error("Failed to upload encryption key.");
 
+      // const response = await fetch("http://localhost:4000/api/file/submit-hash", {  // ✅ Corrected Backend Port
+      //   method: "POST",
+      //   headers: {
+      //     "Content-Type": "application/json"
+      //   },
+      //   body: JSON.stringify({
+      //     hash: encryptedHash
+      //   })
+      // });
+      // const proof = await response.json();
+      // console.log("proof:", proof);
+      
       // 🔥 Step 4: Store the data in the backend (Corrected Backend URL)
+
       const res = await fetch("http://localhost:4000/api/file/new-file", {  // ✅ Corrected Backend Port
         method: "POST",
         headers: {
