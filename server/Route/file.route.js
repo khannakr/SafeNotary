@@ -128,11 +128,11 @@ router.get("/verify/:fileName", async (req, res) => {
   }
 });
 
-const zkeyPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\squared_final.zkey';
+const zkeyPath = 'C:\\Users\\HP\\OneDrive\\Desktop\\safenotary_new\\ZKP\\squared_final.zkey';
 const vkeyPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\verification_key.json';
 const proofsDir = path.join(__dirname, '..', '..', 'ZKP', 'proofs');
-const wasmPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\squared_js\\squared.wasm';
-const witnessGenPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\squared_js\\generate_witness.js';
+const wasmPath = 'C:\\Users\\HP\\OneDrive\\Desktop\\safenotary_new\\ZKP\\squared_js\\squared.wasm';
+const witnessGenPath = 'C:\\Users\\HP\\OneDrive\\Desktop\\safenotary_new\\ZKP\\squared_js\\generate_witness.js';
 
 // Ensure the proofs directory exists
 if (!fs.existsSync(proofsDir)) {
