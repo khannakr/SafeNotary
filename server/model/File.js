@@ -5,6 +5,7 @@ const fileSchema = new mongoose.Schema({
   fileName: { type: String, required: true },
   ipfsHash: { type: String, required: true, unique: true },
   uploadedAt: { type: Date, default: Date.now },
+  zkp: {type: String, }
   
 });
 

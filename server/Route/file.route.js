@@ -18,6 +18,20 @@ const provider = new ethers.JsonRpcProvider(process.env.ALCHEMY_API_URL);
 const signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 const contractAddress = process.env.CONTRACT_ADDRESS;
 
+
+
+const zkeyPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\squared_final.zkey';
+const vkeyPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\verification_key.json';
+const proofsDir = path.join(__dirname, '..', '..', 'ZKP', 'proofs');
+const wasmPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\squared_js\\squared.wasm';
+const witnessGenPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\squared_js\\generate_witness.js';
+
+// Ensure the proofs directory exists
+if (!fs.existsSync(proofsDir)) {
+    fs.mkdirSync(proofsDir, { recursive: true });
+}
+
+
 // ✅ ABI for the contract
 // const abi = [
 //   "function storeProof(string memory _fileName, string memory _cid, string memory _zkp, uint256 _timestamp) public"
@@ -45,26 +59,30 @@ router.post("/new-file", async (req, res) => {
   try {
     const { userId, pdf_url, hash, encryptedFileCID, decryptionKey, filename } = req.body;
 
-    // 🔥 Step 1: Store in MongoDB
-
+    // 🔥 Step 1: Generate ZKP first (as async operation)
+    console.log("🔐 Generating Zero-Knowledge Proof...");
+    const zkp = await generateProof(hash);
+    console.log("✅ ZKP Generated:", zkp);
+    
+    // 🔥 Step 2: Store in MongoDB with the generated proof
     const newFile = new File({
       userId,
       pdf_url,
       hash,
       encryptedFileCID,
       decryptionKey,
-      filename
+      filename,
+      zkp
     });
 
     await newFile.save();
+    console.log("✅ File data saved to MongoDB");
 
-    generateProof(hash);
-
-    // 🔥 Step 2: Store on Ethereum
+    // 🔥 Step 3: Store on Ethereum
     const timestamp = Math.floor(Date.now() / 1000);  
 
     console.log("📩 Sending data to blockchain...");
-    const tx = await contract.storeProof(filename, encryptedFileCID, hash, timestamp);
+    const tx = await contract.storeProof(filename, encryptedFileCID, zkp, timestamp);
     await tx.wait();
     console.log("✅ Data stored successfully on Ethereum! TX Hash:", tx.hash);
 
@@ -127,60 +145,69 @@ router.get("/verify/:fileName", async (req, res) => {
   }
 });
 
-const zkeyPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\squared_final.zkey';
-const vkeyPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\verification_key.json';
-const proofsDir = path.join(__dirname, '..', '..', 'ZKP', 'proofs');
-const wasmPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\squared_js\\squared.wasm';
-const witnessGenPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\squared_js\\generate_witness.js';
-
-// Ensure the proofs directory exists
-if (!fs.existsSync(proofsDir)) {
-    fs.mkdirSync(proofsDir, { recursive: true });
-}
-
-// Function to generate a proof from a hash
+// Function to generate a proof from a hash - converted to Promise-based async function
 function generateProof(hash) {
+  return new Promise((resolve, reject) => {
+    console.log('🔐 Submitting hash for proof generation...');
+    
     try {
-        const inputPath = path.join(proofsDir, 'input.json');
-        const witnessPath = path.join(proofsDir, 'witness.wtns');
+      if (!hash) {
+        return reject(new Error('Hash value is required.'));
+      }
+
+      const inputPath = path.join(proofsDir, 'input.json');
+      const outputPath = path.join(proofsDir, 'proof.json');
+      const publicPath = path.join(proofsDir, 'public.json');
+      const witnessPath = path.join(proofsDir, 'witness.wtns');
+
+      // Use the consistent hash conversion function
+      const numericHash = convertHashToNumeric(hash);
+      
+      // Write the properly formatted input to the file
+      fs.writeFileSync(inputPath, JSON.stringify({ 
+        secret: numericHash, 
+        expectedHash: numericHash 
+      }, null, 2));
+      
+      console.log(`✅ Hash converted and saved: ${numericHash}`);
+      
+      // Step 1: Generate witness using the circuit's generate_witness.js file
+      const witnessCommand = `node "${witnessGenPath}" "${wasmPath}" "${inputPath}" "${witnessPath}"`;
+      exec(witnessCommand, (witnessErr, witnessStdout, witnessStderr) => {
+        if (witnessErr) {
+          console.error('❌ Error during witness generation:', witnessStderr);
+          return reject(new Error('Witness generation failed: ' + witnessStderr));
+        }
         
-        // Consistent hash conversion method using a more deterministic approach
-        // Using a fixed hash conversion method to ensure consistency
-        const numericHash = convertHashToNumeric(hash);
+        console.log('✅ Witness generated:', witnessStdout);
         
-        // Write the properly formatted input to the file
-        fs.writeFileSync(inputPath, JSON.stringify({ 
-            secret: numericHash, 
-            expectedHash: numericHash 
-        }, null, 2));
-        
-        console.log(`✅ Hash converted and saved: ${numericHash}`);
-        
-        // This will run asynchronously in the background - you can implement proper callbacks if needed
-        // Use the circuit's specific generate_witness.js file
-        const witnessCommand = `node "${witnessGenPath}" "${wasmPath}" "${inputPath}" "${witnessPath}"`;
-        exec(witnessCommand, (err, stdout, stderr) => {
-            if (err) {
-                console.error('❌ Error during witness generation:', stderr);
-                return;
-            }
-            console.log('✅ Witness generated successfully');
-            
-            // Once witness is generated, create the proof with entropy seed for deterministic output
-            // Add a deterministic entropy seed based on the hash itself
-            const entropySeed = hash.substring(0, 10); // Use part of the hash as entropy seed
-            const proveCommand = `snarkjs groth16 prove "${zkeyPath}" "${witnessPath}" "${path.join(proofsDir, 'proof.json')}" "${path.join(proofsDir, 'public.json')}" --entropy="${entropySeed}"`;
-            exec(proveCommand, (err, stdout, stderr) => {
-                if (err) {
-                    console.error('❌ Error during proof generation:', stderr);
-                    return;
-                }
-                console.log('✅ Proof generated successfully');
-            });
+        // Step 2: Generate proof with deterministic entropy seed
+        // Using part of the hash itself as the entropy seed ensures consistent results
+        const entropySeed = hash.substring(0, 10);
+        const proveCommand = `snarkjs groth16 prove "${zkeyPath}" "${witnessPath}" "${outputPath}" "${publicPath}" --entropy="${entropySeed}"`;
+        exec(proveCommand, (err, stdout, stderr) => {
+          if (err) {
+            console.error('❌ Error during proof generation:', stderr);
+            return reject(new Error('Proof generation failed: ' + stderr));
+          }
+          
+          console.log('✅ Proof generated:', stdout);
+          // Read and return the proof.json to frontend
+          try {
+            const proofData = fs.readFileSync(outputPath, 'utf8');
+            console.log('Proof data:', proofData);
+            resolve(proofData);
+          } catch (readErr) {
+            console.error('❌ Error reading proof file:', readErr);
+            reject(new Error('Error reading proof file'));
+          }
         });
+      });
     } catch (error) {
-        console.error('❌ Error in generateProof:', error);
+      console.error('❌ Unexpected error:', error);
+      reject(error);
     }
+  });
 }
 
 // Helper function to ensure consistent hash conversion
@@ -209,6 +236,7 @@ function convertHashToNumeric(hash) {
 
 // POST route to handle hash submission and proof generation
 router.post('/submit-hash', (req, res) => {
+  
     console.log('🔐 Submitting hash for proof generation...');
   
     try {

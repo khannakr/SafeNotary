@@ -24,6 +24,9 @@ const fileSchema = new mongoose.Schema({
     filename: {
         type: String,
         required: true
+    },
+    zkp: {
+        type: String
     }
 }, { timestamps: true });   // Adds createdAt and updatedAt fields automatically
 
