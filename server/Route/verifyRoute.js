@@ -52,7 +52,7 @@ router.get("/:fileName", async (req, res) => {
     // 4️⃣ Verify the ZKP (simplified check)
     const isValid = zkp === recalculatedHash; // Replace this with your actual ZKP verification logic
 
-    console.log("🛠️ Verification:", isValid ? "VALID" : "INVALID");
+    console.log("🛠️ Verification:", isValid ? "VALID" : "INVALIDnnn");
 
     res.json({
       fileName: storedFileName,
