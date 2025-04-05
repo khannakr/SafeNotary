@@ -16,7 +16,7 @@ app.use(cookieParser()) // use cookie for authentication
 app.use(express.json())
 app.use(cors()) // important
 
-mongoose.connect("mongodb://localhost:27017/", {
+mongoose.connect("mongodb://localhost:27017/safenotary", {
 })
 .then(() => console.log("MongoDB connected"))
 .catch((error) => console.error("MongoDB connection error:", error));
