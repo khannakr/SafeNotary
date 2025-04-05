@@ -1,0 +1,26 @@
+{
+  "name": "SafeNotary",
+  "version": "1.0.0",
+  "description": "A secure notarization application using IPFS and encryption.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "mongoose": "^5.10.9",
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
+    "axios": "^0.21.1",
+    "crypto-js": "^4.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4",
+    "jest": "^26.6.0"
+  },
+  "engines": {
+    "node": ">=12.0.0"
+  }
+}

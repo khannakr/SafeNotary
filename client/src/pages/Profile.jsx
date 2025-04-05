@@ -3,6 +3,8 @@ import axios from "axios";
 import { useUser } from "../context/userContext.jsx";
 import "./styles.css";
 import { Link } from "react-router-dom";
+import CryptoJS from "crypto-js";
+
 
 const Profile = () => {
   const { user } = useUser();
@@ -11,6 +13,8 @@ const Profile = () => {
   const [userData, setUserData] = useState(user);
   const [selectedFile, setSelectedFile] = useState(null);
   const [files, setFiles] = useState([]);
+  console.log("files", files);
+  
   // ✅ Fetch User Data
    useEffect(() => {
     const fetchFiles = async () => {
@@ -35,6 +39,51 @@ const Profile = () => {
   const handleFileClick = (file) => {
     setSelectedFile(file);
   };
+
+  const handleDownload = async (file) => {
+    try {
+      // 1. Fetch encrypted file from IPFS
+      const encryptedFileUrl = `https://gateway.pinata.cloud/ipfs/${file.encryptedFileCID}`;
+      const response = await fetch(encryptedFileUrl);
+      const encryptedText = await response.text(); // because encrypted file was saved as a Base64-encoded string
+  
+      // 2. Get decryption key (assumes it's stored in DB)
+      const decryptionKey = file.decryptionKey;
+      if (!decryptionKey) {
+        alert("Decryption key not found.");
+        return;
+      }
+  
+      // 3. Decrypt using CryptoJS
+      const decrypted = CryptoJS.AES.decrypt(encryptedText, decryptionKey);
+      const decryptedWordArray = decrypted;
+      const decryptedUint8Array = new Uint8Array(
+        decryptedWordArray.words.map((word, i) =>
+          (i === decryptedWordArray.words.length - 1
+            ? (word >> 24) & 0xff
+            : [word >> 24, word >> 16, word >> 8, word]
+          )
+        ).flat().filter((_, i) => i < decrypted.sigBytes)
+      );
+  
+      // 4. Convert to Blob
+      const blob = new Blob([decryptedUint8Array], { type: "application/pdf" });
+  
+      // 5. Trigger file download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading or decrypting file:", error);
+      alert("Failed to download or decrypt the file.");
+    }
+  };
+  
 
   return (
     <div>
@@ -73,6 +122,7 @@ const Profile = () => {
                 <li key={index}>
                   <p><strong>File Name:</strong> {file.filename}</p>
                   <button onClick={() => handleFileClick(file)}>View Details</button>
+                  <button onClick={() => handleDownload(file)}>Download</button>
                 </li>
               ))}
             </ul>
