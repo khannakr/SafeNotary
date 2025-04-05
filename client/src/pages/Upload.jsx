@@ -28,11 +28,11 @@ const UploadFile = () => {
       reader.onload = () => {
         const fileData = new Uint8Array(reader.result);
 
-        // 🔥 Generate a Random 256-bit AES Key
+        // Generate a Random 256-bit AES Key
         const key = CryptoJS.lib.WordArray.random(32);
         const keyBase64 = CryptoJS.enc.Base64.stringify(key);
 
-        // 🔥 Encrypt the File
+        // Encrypt the File
         const encrypted = CryptoJS.AES.encrypt(
           CryptoJS.lib.WordArray.create(fileData),
           keyBase64
@@ -118,7 +118,7 @@ const UploadFile = () => {
       // const proof = await response.json();
       // console.log("proof:", proof);
       
-      // 🔥 Step 4: Store the data in the backend (Corrected Backend URL)
+      //  Step 4: Store the data in the backend (Corrected Backend URL)
 
       const res = await fetch("http://localhost:4000/api/file/new-file", {  // ✅ Corrected Backend Port
         method: "POST",
