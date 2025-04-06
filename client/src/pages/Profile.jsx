@@ -74,7 +74,7 @@ const Profile = () => {
       const a = document.createElement("a");
       a.href = url;
       a.download = file.filename;
-      document.body.appendChild(a);
+      document.body.appendChild(a);ed
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
