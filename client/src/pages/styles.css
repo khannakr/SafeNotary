@@ -7,7 +7,7 @@
 }
 
 body {
-    line-height: 1.6;
+    line-height: 1.8;
     background-color: #f8f9fa;
     color: #333;
 }
@@ -23,6 +23,44 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 1rem 2rem;
+  background-color: #f8f8f8;
+  flex-wrap: wrap;
+}
+.navbar-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  margin: 0 1rem;
+}
+
+.search-form {
+  display: flex;
+  width: 100%;
+  max-width: 600px;
+}
+
+.search-bar {
+  flex: 1;
+  padding: 10px 16px;
+  border: 1px solid #ccc;
+  border-radius: 6px 0 0 6px;
+  font-size: 1rem;
+}
+
+.search-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 0 6px 6px 0;
+  background-color: #3b1f3b;
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.search-button:hover {
+  background-color: #3b1f3b;
 }
 
 .logo {
@@ -235,7 +273,7 @@ footer {
   }
   
   .card h2 {
-    color: #3b1f3b;
+    color: #050505;
   }
   
   .card p {

@@ -75,8 +75,8 @@ const VerifyNotarization = () => {
             <h3>Verification Result</h3>
             
             <p><strong>File Name:</strong> {fileData.fileName}</p>
-            <p><strong>CID:</strong> <a href={`https://ipfs.io/ipfs/${fileData.cid}`} target="_blank" rel="noopener noreferrer">{fileData.cid}</a></p>
-            <p><strong>ZKP:</strong> {fileData.zkp}</p>
+            {/* <p><strong>CID:</strong> <a href={`https://ipfs.io/ipfs/${fileData.cid}`} target="_blank" rel="noopener noreferrer">{fileData.cid}</a></p> */}
+            {/* <p><strong>ZKP:</strong> {fileData.zkp}</p> */}
             <p><strong>Timestamp:</strong> {new Date(fileData.timestamp).toLocaleString()}</p>
             <p><strong>Validity:</strong> {fileData.valid ? "✅ Valid" : "❌ Invalid"}</p>
           </div>

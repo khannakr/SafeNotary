@@ -111,6 +111,12 @@ const SignUp = () => {
             <input type="password" id="password2" value={formData.password2} onChange={handleChange} required placeholder="Confirm your password" />
           </div>
           <button type="submit" className="btn-action">Sign Up</button>
+          <p className="text-black mt-to mb-2">
+            Already have an account?{" "}
+            <a href="/Login" style={{ textDecoration: "none" }}>
+              Login
+            </a>
+          </p>
         </form>
       </main>
 
