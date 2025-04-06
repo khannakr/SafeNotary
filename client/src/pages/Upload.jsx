@@ -168,14 +168,7 @@ const UploadFile = () => {
 
 
   {uploadMessage && <p>{uploadMessage}</p>}
-  {verificationKey && (
-    <div style={{ marginTop: "1rem" }}>
-      <strong>Verification Key:</strong>
-      <div style={{ wordBreak: "break-all", background: "#f5f5f5", padding: "10px", borderRadius: "6px" }}>
-        {verificationKey}
-      </div>
-    </div>
-  )}
+
 </div>
       </main>
     </div>
