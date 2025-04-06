@@ -7,6 +7,7 @@ import { exec } from "child_process";
 import path from "path"
 import { fileURLToPath } from "url";
 import User from "../model/auth.model.js";
+import VerificationRequest from "../model/verificationRequest.model.js";
 import { createDecipheriv } from "crypto";
 import { create } from "domain";
 dotenv.config({ path: "../blockchain/.env" });  // ✅ Load Ethereum environment variables
@@ -155,8 +156,8 @@ router.get('/getfiles/:username', async (req, res) => {
     console.log("User ID:", userId);
     const response = await File.find({ userId });
     const filteredFiles = response.map(file => {
-
       return {
+        _id: file._id,
         filename: file.filename,
         pdf_url: file.pdf_url,
         createdAt: file.createdAt,
@@ -172,6 +173,151 @@ router.get('/getfiles/:username', async (req, res) => {
   } 
 });
 
+// Route to handle verification key requests
+router.post('/request-verification', async (req, res) => {
+  try {
+    const { fileId, fileName, requesterId, requesterName, ownerId, message } = req.body;
+    
+    // Check if the request already exists
+    const existingRequest = await VerificationRequest.findOne({
+      fileId,
+      requesterId,
+      status: 'pending'
+    });
+    
+    if (existingRequest) {
+      return res.status(400).send({
+        ok: false,
+        message: "You already have a pending request for this file"
+      });
+    }
+    
+    // Create new verification request
+    const newRequest = new VerificationRequest({
+      fileId,
+      fileName,
+      requesterId,
+      requesterName,
+      ownerId,
+      message
+    });
+    
+    await newRequest.save();
+    
+    res.status(200).send({
+      ok: true,
+      message: "Verification key request submitted successfully",
+      request: newRequest
+    });
+    
+  } catch (error) {
+    console.error("Error creating verification request:", error);
+    res.status(500).send({
+      ok: false,
+      message: error.message
+    });
+  }
+});
+
+// Route to get all verification requests for a user
+router.get('/verification-requests/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const requests = await VerificationRequest.find({ ownerId: userId });
+    
+    // Get additional info for each request
+    const requestsWithDetails = await Promise.all(requests.map(async (request) => {
+      const file = await File.findById(request.fileId);
+      return {
+        ...request.toObject(),
+        fileInfo: file ? {
+          filename: file.filename,
+          createdAt: file.createdAt
+        } : null
+      };
+    }));
+    
+    res.status(200).send({
+      ok: true,
+      requests: requestsWithDetails
+    });
+    
+  } catch (error) {
+    console.error("Error fetching verification requests:", error);
+    res.status(500).send({
+      ok: false,
+      message: error.message
+    });
+  }
+});
+
+// Route to get all verification requests made by the user (sent requests)
+router.get('/sent-requests/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const requests = await VerificationRequest.find({ requesterId: userId });
+    
+    // Get additional info for each request
+    const requestsWithDetails = await Promise.all(requests.map(async (request) => {
+      const file = await File.findById(request.fileId);
+      const owner = await User.findById(request.ownerId);
+      return {
+        ...request.toObject(),
+        fileInfo: file ? {
+          filename: file.filename,
+          createdAt: file.createdAt
+        } : null,
+        ownerName: owner ? owner.name : 'Unknown User'
+      };
+    }));
+    
+    res.status(200).send({
+      ok: true,
+      requests: requestsWithDetails
+    });
+    
+  } catch (error) {
+    console.error("Error fetching sent requests:", error);
+    res.status(500).send({
+      ok: false,
+      message: error.message
+    });
+  }
+});
+
+// Route to update verification request status
+router.put('/verification-request/:requestId', async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { status, message } = req.body;
+    
+    const updatedRequest = await VerificationRequest.findByIdAndUpdate(
+      requestId,
+      { status, message },
+      { new: true }
+    );
+    
+    if (!updatedRequest) {
+      return res.status(404).send({
+        ok: false,
+        message: "Verification request not found"
+      });
+    }
+    
+    res.status(200).send({
+      ok: true,
+      message: `Request ${status}`,
+      request: updatedRequest
+    });
+    
+  } catch (error) {
+    console.error("Error updating verification request:", error);
+    res.status(500).send({
+      ok: false,
+      message: error.message
+    });
+  }
+});
 
 // ✅ Verification Route (Fetch from Ethereum)
 router.get("/verify/:fileName", async (req, res) => {
@@ -373,4 +519,3 @@ router.post('/submit-hash', (req, res) => {
 
 
 export default router;
- 

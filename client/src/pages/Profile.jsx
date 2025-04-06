@@ -12,33 +12,60 @@ const Profile = () => {
   const [userData, setUserData] = useState(user);
   const [selectedFile, setSelectedFile] = useState(null);
   const [files, setFiles] = useState([]);
-  console.log("files", files);
+  const [receivedRequests, setReceivedRequests] = useState([]);
+  const [sentRequests, setSentRequests] = useState([]);
+  const [activeTab, setActiveTab] = useState('files');
 
   // ✅ Fetch User Data
   useEffect(() => {
     const fetchFiles = async () => {
       try {
-        axios
-          .get(`http://localhost:4000/api/file/get/${userID}`)
-          .then((response) => {
-            console.log(response);
-            setFiles(response.data.files);
-            console.log("Files: ", response.data.files);
-          })
-          .catch((error) => {
-            console.error("Error fetching user files: ", error);
-          });
+        if (!userID) return;
+        
+        const fileResponse = await axios.get(`http://localhost:4000/api/file/get/${userID}`);
+        setFiles(fileResponse.data.files);
+        
+        // Fetch verification requests where user is the owner
+        const receivedResponse = await axios.get(`http://localhost:4000/api/file/verification-requests/${userID}`);
+        setReceivedRequests(receivedResponse.data.requests);
+        
+        // Fetch verification requests made by the user
+        const sentResponse = await axios.get(`http://localhost:4000/api/file/sent-requests/${userID}`);
+        setSentRequests(sentResponse.data.requests);
       } catch (error) {
-        console.error("Error fetching user data: ", error);
+        console.error("Error fetching data: ", error);
       }
     };
 
     fetchFiles();
-  }, []);
+  }, [userID]);
 
   // ✅ Handle File Click to Show Details
   const handleFileClick = (file) => {
     setSelectedFile(file);
+  };
+
+  // Handle approve or reject verification request
+  const handleVerificationResponse = async (requestId, status) => {
+    try {
+      const response = await axios.put(`http://localhost:4000/api/file/verification-request/${requestId}`, {
+        status,
+        message: status === 'approved' 
+          ? 'Your request has been approved. You can now verify this file.'
+          : 'Your request has been rejected.'
+      });
+      
+      if (response.data.ok) {
+        // Update the requests list
+        setReceivedRequests(receivedRequests.map(req => 
+          req._id === requestId ? {...req, status} : req
+        ));
+        alert(`Request ${status} successfully!`);
+      }
+    } catch (error) {
+      console.error("Error updating request status:", error);
+      alert("Failed to update request status.");
+    }
   };
 
   const handleDownload = async (file) => {
@@ -87,6 +114,11 @@ const Profile = () => {
     }
   };
 
+  // Format date for display
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString();
+  };
+
   return (
     <div className="h-screen w-full">
       {/* ✅ Navbar */}
@@ -108,8 +140,8 @@ const Profile = () => {
         </nav>
       </header>
 
-      <main className="mx-auto px-4 py-8 space-y-6 h-screen w-full flex flex-col gap-10">
-        <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 w-full bg-red-500">
+      <main className="mx-auto px-4 py-8 space-y-6 h-full w-full flex flex-col gap-10">
+        <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 w-full">
           <h2 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">
             Profile Information
           </h2>
@@ -132,85 +164,227 @@ const Profile = () => {
           )}
         </div>
 
-        {/* ✅ Uploaded Files Section */}
-        <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">
-            Uploaded Files
-          </h2>
-          {files.length > 0 ? (
-            <ul className="space-y-3">
-              {files.map((file, index) => (
-                <li
-                  key={index}
-                  className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:border-blue-200 hover:bg-blue-50 transition-colors duration-200"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <p className="font-medium text-gray-700">
-                      <span className="inline-block mr-2">
-                        {file.filename.endsWith(".pdf")
-                          ? "📕"
-                          : file.filename.endsWith(".docx")
-                          ? "📘"
-                          : file.filename.endsWith(".txt")
-                          ? "📄"
-                          : "📁"}
-                      </span>
-                      {file.filename}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => handleFileClick(file)}
-                        className="bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-1.5 px-3 rounded-lg mr-2 text-sm transition-colors duration-200 flex items-center"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4 mr-1"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                          />
-                        </svg>
-                        View Details
-                      </button>
-                      <button
-                        onClick={() => handleDownload(file)}
-                        className="bg-green-500 hover:bg-green-600 text-white font-medium py-1.5 px-3 rounded-lg text-sm transition-colors duration-200 flex items-center"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4 mr-1"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                          />
-                        </svg>
-                        Download
-                      </button>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-500 italic py-4">No files uploaded yet.</p>
+        {/* Tabs Navigation */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex border-b mb-6">
+            <button
+              className={`px-4 py-2 font-medium ${activeTab === 'files' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+              onClick={() => setActiveTab('files')}
+            >
+              My Files
+            </button>
+            <button 
+              className={`px-4 py-2 font-medium ${activeTab === 'received' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+              onClick={() => setActiveTab('received')}
+            >
+              Verification Requests 
+              {receivedRequests.filter(req => req.status === 'pending').length > 0 && (
+                <span className="ml-2 px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full">
+                  {receivedRequests.filter(req => req.status === 'pending').length}
+                </span>
+              )}
+            </button>
+            <button 
+              className={`px-4 py-2 font-medium ${activeTab === 'sent' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+              onClick={() => setActiveTab('sent')}
+            >
+              My Requests
+            </button>
+          </div>
+
+          {/* Files Tab */}
+          {activeTab === 'files' && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">
+                Uploaded Files
+              </h2>
+              {files.length > 0 ? (
+                <ul className="space-y-3">
+                  {files.map((file, index) => (
+                    <li
+                      key={index}
+                      className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:border-blue-200 hover:bg-blue-50 transition-colors duration-200"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <p className="font-medium text-gray-700">
+                          <span className="inline-block mr-2">
+                            {file.filename.endsWith(".pdf")
+                              ? "📕"
+                              : file.filename.endsWith(".docx")
+                              ? "📘"
+                              : file.filename.endsWith(".txt")
+                              ? "📄"
+                              : "📁"}
+                          </span>
+                          {file.filename}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => handleFileClick(file)}
+                            className="bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-1.5 px-3 rounded-lg mr-2 text-sm transition-colors duration-200 flex items-center"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4 mr-1"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                              />
+                            </svg>
+                            View Details
+                          </button>
+                          <button
+                            onClick={() => handleDownload(file)}
+                            className="bg-green-500 hover:bg-green-600 text-white font-medium py-1.5 px-3 rounded-lg text-sm transition-colors duration-200 flex items-center"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4 mr-1"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                              />
+                            </svg>
+                            Download
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-500 italic py-4">No files uploaded yet.</p>
+              )}
+            </div>
+          )}
+
+          {/* Received Verification Requests Tab */}
+          {activeTab === 'received' && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">
+                Verification Requests for Your Files
+              </h2>
+              
+              {receivedRequests.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full bg-white border border-gray-200 text-sm">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="py-3 px-6 border-b text-left text-gray-600 font-semibold">Requester</th>
+                        <th className="py-3 px-6 border-b text-left text-gray-600 font-semibold">File</th>
+                        <th className="py-3 px-6 border-b text-left text-gray-600 font-semibold">Date</th>
+                        <th className="py-3 px-6 border-b text-left text-gray-600 font-semibold">Message</th>
+                        <th className="py-3 px-6 border-b text-left text-gray-600 font-semibold">Status</th>
+                        <th className="py-3 px-6 border-b text-left text-gray-600 font-semibold">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {receivedRequests.map((request, index) => (
+                        <tr key={request._id} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                          <td className="py-3 px-6 border-b">{request.requesterName}</td>
+                          <td className="py-3 px-6 border-b">{request.fileName}</td>
+                          <td className="py-3 px-6 border-b">{formatDate(request.createdAt)}</td>
+                          <td className="py-3 px-6 border-b">{request.message || '-'}</td>
+                          <td className="py-3 px-6 border-b">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                              request.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                            </span>
+                          </td>
+                          <td className="py-3 px-6 border-b">
+                            {request.status === 'pending' && (
+                              <div className="flex space-x-2">
+                                <button 
+                                  onClick={() => handleVerificationResponse(request._id, 'approved')}
+                                  className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium hover:bg-green-200"
+                                >
+                                  Approve
+                                </button>
+                                <button 
+                                  onClick={() => handleVerificationResponse(request._id, 'rejected')}
+                                  className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium hover:bg-red-200"
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-gray-500 italic py-4">No verification requests received.</p>
+              )}
+            </div>
+          )}
+
+          {/* Sent Verification Requests Tab */}
+          {activeTab === 'sent' && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">
+                My Verification Requests
+              </h2>
+              
+              {sentRequests.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full bg-white border border-gray-200 text-sm">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="py-3 px-6 border-b text-left text-gray-600 font-semibold">File Owner</th>
+                        <th className="py-3 px-6 border-b text-left text-gray-600 font-semibold">File</th>
+                        <th className="py-3 px-6 border-b text-left text-gray-600 font-semibold">Date</th>
+                        <th className="py-3 px-6 border-b text-left text-gray-600 font-semibold">Message</th>
+                        <th className="py-3 px-6 border-b text-left text-gray-600 font-semibold">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sentRequests.map((request, index) => (
+                        <tr key={request._id} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                          <td className="py-3 px-6 border-b">{request.ownerName}</td>
+                          <td className="py-3 px-6 border-b">{request.fileName}</td>
+                          <td className="py-3 px-6 border-b">{formatDate(request.createdAt)}</td>
+                          <td className="py-3 px-6 border-b">{request.message || '-'}</td>
+                          <td className="py-3 px-6 border-b">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                              request.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-gray-500 italic py-4">You haven't made any verification requests yet.</p>
+              )}
+            </div>
           )}
         </div>
 

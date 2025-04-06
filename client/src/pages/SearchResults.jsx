@@ -68,8 +68,42 @@ const SearchResults = () => {
   };
 
   const handleRequest = async (file) => {
-    const fileId = file._id;    
-}
+    if (!user) {
+      alert("Please login to request verification keys");
+      return;
+    }
+    
+    try {
+      // Show a modal or prompt for message input
+      const message = prompt("Enter a message to the file owner (optional):");
+      
+      const response = await fetch('http://localhost:4000/api/file/request-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileId: file._id,
+          fileName: file.filename,
+          requesterId: user._id,
+          requesterName: user.name,
+          ownerId: file.userId,
+          message: message || ''
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.ok) {
+        alert("Verification key request sent successfully!");
+      } else {
+        alert(`Error: ${data.message}`);
+      }
+    } catch (error) {
+      console.error('Error sending verification request:', error);
+      alert("Failed to send verification request. Please try again.");
+    }
+  };
 
   return (
     <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 bg-gray-50 min-h-screen bg-gradient-to-b from-gray-50 to-white">
