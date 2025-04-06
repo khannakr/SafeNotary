@@ -86,9 +86,9 @@ const VerifyNotarization = () => {
             <p><strong>Timestamp:</strong> {new Date(fileData.timestamp).toLocaleString()}</p>
             <p><strong>Validity:</strong> {fileData.valid ? "✅ Valid" : "❌ Invalid"}</p>
             
-            {fileData.valid && fileData.verificationKey && (
+            {/* {fileData.valid && fileData.verificationKey && (
               <p><strong>Verification Key:</strong> {fileData.verificationKey}</p>
-            )}
+            )} */}
           </div>
         )}
       </main>
