@@ -6,6 +6,9 @@ import fs from "fs";
 import { exec } from "child_process";
 import path from "path"
 import { fileURLToPath } from "url";
+import User from "../model/auth.model.js";
+import { createDecipheriv } from "crypto";
+import { create } from "domain";
 dotenv.config({ path: "../blockchain/.env" });  // ✅ Load Ethereum environment variables
 
 const router = express.Router();
@@ -20,11 +23,11 @@ const contractAddress = process.env.CONTRACT_ADDRESS;
 
 
 
-const zkeyPath = 'C:\\Users\\HP\\OneDrive\\Desktop\\safenotary_new\\ZKP\\squared_final.zkey';
+const zkeyPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\squared_final.zkey';
 const vkeyPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\verification_key.json';
 const proofsDir = path.join(__dirname, '..', '..', 'ZKP', 'proofs');
-const wasmPath = 'C:\\Users\\HP\\OneDrive\\Desktop\\safenotary_new\\ZKP\\squared_js\\squared.wasm';
-const witnessGenPath = 'C:\\Users\\HP\\OneDrive\\Desktop\\safenotary_new\\ZKP\\squared_js\\generate_witness.js';
+const wasmPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\squared_js\\squared.wasm';
+const witnessGenPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\squared_js\\generate_witness.js';
 
 // Ensure the proofs directory exists
 if (!fs.existsSync(proofsDir)) {
@@ -85,7 +88,7 @@ const contract = new ethers.Contract(contractAddress, contractABI, signer);
 // 🔥 Store File in MongoDB & Ethereum
 router.post("/new-file", async (req, res) => {
   try {
-    const { userId, pdf_url, hash, encryptedFileCID, decryptionKey, filename } = req.body;
+    const { userId, pdf_url, hash, encryptedFileCID, decryptionKey, filename, verificationKey } = req.body;
 
     // 🔥 Step 1: Generate ZKP first (as async operation)
     console.log("🔐 Generating Zero-Knowledge Proof...");
@@ -100,7 +103,8 @@ router.post("/new-file", async (req, res) => {
       encryptedFileCID,
       decryptionKey,
       filename,
-      zkp
+      zkp,
+      verificationKey
     });
 
     await newFile.save();
@@ -141,6 +145,33 @@ router.get('/get/:userId', async (req, res) => {
     res.status(500).send({ ok: false, message: error.message });
   } 
 });
+
+router.get('/getfiles/:username', async (req, res) => {
+  const username = req.params.username;
+  try {
+    const user = await User.findOne({name: username});
+    if (!user) return res.status(404).send({ ok: false, message: "User not found" });
+    const userId = user._id;
+    console.log("User ID:", userId);
+    const response = await File.find({ userId });
+    const filteredFiles = response.map(file => {
+
+      return {
+        filename: file.filename,
+        pdf_url: file.pdf_url,
+        createdAt: file.createdAt,
+        updatedAt: file.updatedAt,
+        userId: file.userId,
+      };
+    })
+    
+    res.send({ ok: true, files: filteredFiles });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({ ok: false, message: error.message });
+  } 
+});
+
 
 // ✅ Verification Route (Fetch from Ethereum)
 router.get("/verify/:fileName", async (req, res) => {

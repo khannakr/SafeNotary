@@ -18,52 +18,29 @@ const SearchResults = () => {
       try {
         setLoading(true);
         
-        // Replace this with your actual API call to fetch user data by username
-        // Example:
-        // const response = await fetch(`/api/users/${username}`);
-        // const userData = await response.json();
+        // Fetch file data for the user
+        const response = await fetch(`http://localhost:4000/api/file/getfiles/${username}`);
+        const data = await response.json();
+        console.log('userData', data);
         
-        // Mock data for demonstration
-        const mockUserData = {
-          id: 'user123',
-          username: username,
-          email: `${username}@example.com`,
-          joinedDate: '2023-01-15'
-        };
-        
-        setSearchedUser(mockUserData);
-        
-        // Replace this with your actual API call to fetch file history
-        // Example:
-        // const filesResponse = await fetch(`/api/users/${userData.id}/files`);
-        // const filesData = await filesResponse.json();
-        
-        // Mock file history data
-        const mockFileHistory = [
-          {
-            id: 'file1',
-            name: 'Contract.pdf',
-            hash: '0x1a2b3c4d5e6f7g8h9i0j',
-            timestamp: '2023-05-10T14:30:00Z',
-            status: 'verified'
-          },
-          {
-            id: 'file2',
-            name: 'Agreement.docx',
-            hash: '0xa1b2c3d4e5f6g7h8i9j0',
-            timestamp: '2023-04-22T09:15:00Z',
-            status: 'verified'
-          },
-          {
-            id: 'file3',
-            name: 'Proof-of-concept.pdf',
-            hash: '0xz9y8x7w6v5u4t3s2r1q0',
-            timestamp: '2023-03-15T11:45:00Z',
-            status: 'verified'
-          }
-        ];
-        
-        setFileHistory(mockFileHistory);
+        if (data && data.ok && data.files && data.files.length > 0) {
+          // Use the first file's userId to construct user data
+          const fileData = data.files[0];
+          
+          // Create user data from the file information
+          const userData = {
+            id: fileData.userId,
+            username: username,
+            email: `${username}@safenotary.com`, // Default email pattern
+            joinedDate: new Date(fileData.createdAt).toISOString().split('T')[0]
+          };
+          
+          setSearchedUser(userData);
+          setFileHistory(data.files);
+        } else {
+          setSearchedUser(null);
+          setFileHistory([]);
+        }
       } catch (err) {
         console.error('Error fetching user data:', err);
         setError('Failed to fetch user data. Please try again later.');
@@ -79,6 +56,20 @@ const SearchResults = () => {
       setLoading(false);
     }
   }, [username]);
+
+  // Format date helper function
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString();
+  };
+
+  // Format hash helper function - truncate to first 8 chars
+  const formatHash = (hash) => {
+    return hash ? `${hash.substring(0, 8)}...` : 'N/A';
+  };
+
+  const handleRequest = async (file) => {
+    const fileId = file._id;    
+}
 
   return (
     <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8 bg-gray-50 min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -119,11 +110,11 @@ const SearchResults = () => {
                   <span className="font-semibold text-blue-700">{searchedUser.username}</span>
                 </p>
                 <p className="text-gray-700 flex flex-col sm:flex-row sm:items-center text-sm sm:text-base">
-                  <span className="text-gray-900 font-medium sm:w-28 mb-1 sm:mb-0">Email:</span> 
-                  <span className="break-all">{searchedUser.email}</span>
+                  <span className="text-gray-900 font-medium sm:w-28 mb-1 sm:mb-0">User ID:</span> 
+                  <span className="break-all font-mono text-xs sm:text-sm">{searchedUser.id}</span>
                 </p>
                 <p className="text-gray-700 flex flex-col sm:flex-row sm:items-center text-sm sm:text-base">
-                  <span className="text-gray-900 font-medium sm:w-28 mb-1 sm:mb-0">Joined:</span> 
+                  <span className="text-gray-900 font-medium sm:w-28 mb-1 sm:mb-0">First File:</span> 
                   <span className="text-green-700">{new Date(searchedUser.joinedDate).toLocaleDateString()}</span>
                 </p>
               </div>
@@ -133,6 +124,7 @@ const SearchResults = () => {
                     <span className="text-2xl sm:text-3xl text-blue-700">{searchedUser.username.charAt(0).toUpperCase()}</span>
                   </div>
                   <p className="text-blue-800 font-medium text-sm sm:text-base">Registered User</p>
+                  <p className="text-blue-600 text-xs sm:text-sm mt-1">Files: {fileHistory.length}</p>
                 </div>
               </div>
             </div>
@@ -151,36 +143,47 @@ const SearchResults = () => {
                   <thead className="bg-gray-100">
                     <tr>
                       <th className="py-2 px-3 sm:py-3 sm:px-6 border-b text-left text-gray-600 font-semibold">File Name</th>
-                      <th className="py-2 px-3 sm:py-3 sm:px-6 border-b text-left text-gray-600 font-semibold">Hash</th>
+                      {/* <th className="py-2 px-3 sm:py-3 sm:px-6 border-b text-left text-gray-600 font-semibold">Hash</th> */}
                       <th className="py-2 px-3 sm:py-3 sm:px-6 border-b text-left text-gray-600 font-semibold hidden md:table-cell">Date</th>
-                      <th className="py-2 px-3 sm:py-3 sm:px-6 border-b text-left text-gray-600 font-semibold">Status</th>
+                      <th className="py-2 px-3 sm:py-3 sm:px-6 border-b text-left text-gray-600 font-semibold">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {fileHistory.map((file, index) => (
-                      <tr key={file.id} className={`hover:bg-blue-50 transition-colors duration-150 ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}>
+                      <tr key={file._id} className={`hover:bg-blue-50 transition-colors duration-150 ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}>
                         <td className="py-2 px-3 sm:py-3 sm:px-6 border-b">
                           <div className="flex items-center">
                             <span className="text-blue-600 mr-1 sm:mr-2">
-                              {file.name.endsWith('.pdf') ? '📕' : file.name.endsWith('.docx') ? '📘' : '📄'}
+                              {file.filename.endsWith('.pdf') ? '📕' : 
+                               file.filename.endsWith('.json') ? '📘' : 
+                               file.filename.endsWith('.txt') ? '📝' : '📄'}
                             </span>
-                            <span className="truncate max-w-[100px] sm:max-w-none">{file.name}</span>
+                            <span className="truncate max-w-[100px] sm:max-w-none">{file.filename}</span>
                           </div>
                         </td>
-                        <td className="py-2 px-3 sm:py-3 sm:px-6 border-b">
-                          <span className="text-xs sm:text-sm font-mono bg-gray-100 p-1 rounded">{file.hash.substring(0, 6)}...</span>
-                        </td>
+                        {/* <td className="py-2 px-3 sm:py-3 sm:px-6 border-b">
+                          <span className="text-xs sm:text-sm font-mono bg-gray-100 p-1 rounded">{formatHash(file.hash)}</span>
+                        </td> */}
                         <td className="py-2 px-3 sm:py-3 sm:px-6 border-b hidden md:table-cell">
-                          {new Date(file.timestamp).toLocaleString()}
+                          {formatDate(file.createdAt)}
                         </td>
                         <td className="py-2 px-3 sm:py-3 sm:px-6 border-b">
-                          <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
-                            file.status === 'verified' 
-                              ? 'bg-green-100 text-green-800 border border-green-200' 
-                              : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-                          }`}>
-                            {file.status === 'verified' ? '✓' : '⌛'} {file.status}
-                          </span>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            {/* <a 
+                              href={file.pdf_url} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-green-100 text-green-800 border border-green-200 hover:bg-green-200 transition-colors text-center"
+                            >
+                              View File
+                            </a> */}
+                            <button 
+                              className="px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200 hover:bg-blue-200 transition-colors"
+                              onClick={() => handleRequest(file)}
+                            >
+                              Request Verification Key
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
