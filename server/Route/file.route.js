@@ -291,18 +291,38 @@ router.put('/verification-request/:requestId', async (req, res) => {
     const { requestId } = req.params;
     const { status, message } = req.body;
     
-    const updatedRequest = await VerificationRequest.findByIdAndUpdate(
-      requestId,
-      { status, message },
-      { new: true }
-    );
-    
-    if (!updatedRequest) {
+    // Get the request first to access fileId
+    const request = await VerificationRequest.findById(requestId);
+    if (!request) {
       return res.status(404).send({
         ok: false,
         message: "Verification request not found"
       });
     }
+    
+    let updateData = { status, message };
+    
+    // If approving, get the verification key from the file and include it
+    if (status === 'approved') {
+      const file = await File.findById(request.fileId);
+      if (!file) {
+        return res.status(404).send({
+          ok: false,
+          message: "File not found"
+        });
+      }
+      
+      // Add verification key to the request
+      console.log("File verification key:", file);
+      
+      updateData.verificationKey = file.verificationKey;
+    }
+    
+    const updatedRequest = await VerificationRequest.findByIdAndUpdate(
+      requestId,
+      updateData,
+      { new: true }
+    );
     
     res.status(200).send({
       ok: true,

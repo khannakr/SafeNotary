@@ -114,10 +114,32 @@ const Profile = () => {
     }
   };
 
+  // Function to download verification key as a file
+  const handleDownloadKey = (fileName, verificationKey) => {
+    // Create a text file with the verification key
+    const fileContent = `Verification Key for ${fileName}:\n\n${verificationKey}`;
+    const blob = new Blob([fileContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    
+    // Create a temporary link and trigger download
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `verification-key-${fileName.replace(/\s+/g, '-')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    
+    // Clean up
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   // Format date for display
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString();
   };
+
+  console.log(sentRequests, "sentRequests");
+  
 
   return (
     <div className="h-screen w-full">
@@ -166,7 +188,7 @@ const Profile = () => {
 
         {/* Tabs Navigation */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex border-b mb-6">
+          <div className="flex border-b mb-6 flex flex-row gap-10">
             <button
               className={`px-4 py-2 font-medium ${activeTab === 'files' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
               onClick={() => setActiveTab('files')}
@@ -358,6 +380,7 @@ const Profile = () => {
                         <th className="py-3 px-6 border-b text-left text-gray-600 font-semibold">Date</th>
                         <th className="py-3 px-6 border-b text-left text-gray-600 font-semibold">Message</th>
                         <th className="py-3 px-6 border-b text-left text-gray-600 font-semibold">Status</th>
+                        <th className="py-3 px-6 border-b text-left text-gray-600 font-semibold">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -375,6 +398,42 @@ const Profile = () => {
                             }`}>
                               {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                             </span>
+                          </td>
+                          <td className="py-3 px-6 border-b">
+                            {request.status === 'approved' && (
+                              <div className="flex flex-col space-y-2">
+                                <div className="flex items-center space-x-2">
+                                  <input 
+                                    type="text" 
+                                    value={request.verificationKey} 
+                                    readOnly
+                                    className="bg-gray-50 text-xs rounded border px-2 py-1 w-32 truncate"
+                                  />
+                                  <button 
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(request.verificationKey);
+                                      alert('Verification key copied to clipboard!');
+                                    }}
+                                    className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
+                                    title="Copy to clipboard"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                    </svg>
+                                  </button>
+                                </div>
+                                <button 
+                                  onClick={() => handleDownloadKey(request.fileName, request.verificationKey)}
+                                  className="w-full px-3 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center justify-center font-medium transition-colors duration-200"
+                                  title="Download key as file"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                  </svg>
+                                  Download Key
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       ))}

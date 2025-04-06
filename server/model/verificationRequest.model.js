@@ -30,6 +30,10 @@ const verificationRequestSchema = new mongoose.Schema({
     message: {
         type: String,
         default: ''
+    },
+    verificationKey: {
+        type: String,
+        default: null
     }
 }, { timestamps: true });
 
