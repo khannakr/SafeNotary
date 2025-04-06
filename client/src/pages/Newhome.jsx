@@ -1,41 +1,57 @@
-import React from "react";
+import React, { useState } from "react";
 import "./styles.css"; // Ensure your styles are linked correctly
 import { useUser } from "../context/userContext";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const Home = () => {
   const {user} = useUser();
-  console.log(user);
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search-results?username=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
   
   return (
     <div>
       {/* Navigation Bar */}
-      
-
       <header>
-        <nav className="navbar">
+        <nav className="flex flex-row justify-between items-center h-full px-4">
           <div className="logo">SafeNotary</div>
-          <ul className="nav-links">
-
-          <div className="navbar-center">
-  <form className="search-form" onSubmit={(e) => e.preventDefault()}>
-    <input
-      type="text"
-      placeholder="Search profile"
-      className="search-bar"
-    />
-    <button type="submit" className="search-button">Search</button>
-  </form>
-</div>
-
-          <li>
-              <Link to="/profile" className="btn-action">Profile</Link>  {/* ✅ Navigate to File page */}
-          </li>
-          <li>
-              <Link to="/" className="btn-action">Logout</Link>  {/* ✅ Navigate to File page */}
-          </li>
-          
-            {/* You can add navigation links here if needed */}
+          <ul className="flex flex-row items-center space-x-4">
+            <div className="h-full rounded-lg">
+              <form
+                className="h-full flex flex-row items-center space-x-2 w-92 gap-6"
+                onSubmit={handleSearch}
+              >
+                <input
+                  type="text"
+                  placeholder="Search profile"
+                  className="search-bar w-64 px-2 py-1 rounded flex-0"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <button
+                  type="submit"
+                  className="text-white w-32 h-10 text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
+                >
+                  Search
+                </button>
+              </form>
+            </div>
+            <li>
+              <Link to="/profile" className="btn-action">
+                Profile
+              </Link>
+            </li>
+            <li>
+              <Link to="/" className="btn-action">
+                Logout
+              </Link>
+            </li>
           </ul>
         </nav>
       </header>

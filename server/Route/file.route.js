@@ -6,6 +6,10 @@ import fs from "fs";
 import { exec } from "child_process";
 import path from "path"
 import { fileURLToPath } from "url";
+import User from "../model/auth.model.js";
+import VerificationRequest from "../model/verificationRequest.model.js";
+import { createDecipheriv } from "crypto";
+import { create } from "domain";
 dotenv.config({ path: "../blockchain/.env" });  // ✅ Load Ethereum environment variables
 
 const router = express.Router();
@@ -20,11 +24,11 @@ const contractAddress = process.env.CONTRACT_ADDRESS;
 
 
 
-const zkeyPath = 'C:\\Users\\HP\\OneDrive\\Desktop\\safenotary_new\\ZKP\\squared_final.zkey';
+const zkeyPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\squared_final.zkey';
 const vkeyPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\verification_key.json';
 const proofsDir = path.join(__dirname, '..', '..', 'ZKP', 'proofs');
-const wasmPath = 'C:\\Users\\HP\\OneDrive\\Desktop\\safenotary_new\\ZKP\\squared_js\\squared.wasm';
-const witnessGenPath = 'C:\\Users\\HP\\OneDrive\\Desktop\\safenotary_new\\ZKP\\squared_js\\generate_witness.js';
+const wasmPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\squared_js\\squared.wasm';
+const witnessGenPath = 'C:\\Users\\chand\\OneDrive\\Documents\\Desktop\\Projects\\SafeNotary\\ZKP\\squared_js\\generate_witness.js';
 
 // Ensure the proofs directory exists
 if (!fs.existsSync(proofsDir)) {
@@ -33,32 +37,14 @@ if (!fs.existsSync(proofsDir)) {
 
 
 // ✅ ABI for the contract
-// const contractABI = [
-//   "function storeProof(string memory _fileName, string memory _cid, string memory _zkp, uint256 _timestamp) public"
-// ];
-// const contractABI = [
-//   {
-//     "inputs": [{ "internalType": "string", "name": "_fileName", "type": "string" }],
-//     "name": "getFileProof",
-//     "outputs": [
-//       { "internalType": "string", "name": "fileName", "type": "string" },
-//       { "internalType": "string", "name": "cid", "type": "string" },
-//       { "internalType": "string", "name": "zkp", "type": "string" },
-//       { "internalType": "uint256", "name": "timestamp", "type": "uint256" }
-//     ],
-//     "stateMutability": "view",
-//     "type": "function"
-//   }
-// ];
-
-
 const contractABI = [
   {
     "inputs": [
       { "internalType": "string", "name": "_fileName", "type": "string" },
       { "internalType": "string", "name": "_cid", "type": "string" },
       { "internalType": "string", "name": "_zkp", "type": "string" },
-      { "internalType": "uint256", "name": "_timestamp", "type": "uint256" }
+      { "internalType": "uint256", "name": "_timestamp", "type": "uint256" },
+      { "internalType": "string", "name": "_verificationKey", "type": "string" }
     ],
     "name": "storeProof",
     "outputs": [],
@@ -72,7 +58,21 @@ const contractABI = [
       { "internalType": "string", "name": "fileName", "type": "string" },
       { "internalType": "string", "name": "cid", "type": "string" },
       { "internalType": "string", "name": "zkp", "type": "string" },
-      { "internalType": "uint256", "name": "timestamp", "type": "uint256" }
+      { "internalType": "uint256", "name": "timestamp", "type": "uint256" },
+      { "internalType": "string", "name": "verificationKey", "type": "string" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "string", "name": "_verificationKey", "type": "string" }],
+    "name": "getFileProofByVerificationKey",
+    "outputs": [
+      { "internalType": "string", "name": "fileName", "type": "string" },
+      { "internalType": "string", "name": "cid", "type": "string" },
+      { "internalType": "string", "name": "zkp", "type": "string" },
+      { "internalType": "uint256", "name": "timestamp", "type": "uint256" },
+      { "internalType": "string", "name": "verificationKey", "type": "string" }
     ],
     "stateMutability": "view",
     "type": "function"
@@ -82,10 +82,10 @@ const contractABI = [
 
 const contract = new ethers.Contract(contractAddress, contractABI, signer);
 
-// 🔥 Store File in MongoDB & Ethereum
+// 🔥 Store File in MongoDB & Ethereum - Update to include verification key
 router.post("/new-file", async (req, res) => {
   try {
-    const { userId, pdf_url, hash, encryptedFileCID, decryptionKey, filename } = req.body;
+    const { userId, pdf_url, hash, encryptedFileCID, decryptionKey, filename, verificationKey } = req.body;
 
     // 🔥 Step 1: Generate ZKP first (as async operation)
     console.log("🔐 Generating Zero-Knowledge Proof...");
@@ -100,21 +100,20 @@ router.post("/new-file", async (req, res) => {
       encryptedFileCID,
       decryptionKey,
       filename,
-      zkp
+      zkp,
+      verificationKey
     });
 
     await newFile.save();
     console.log("✅ File data saved to MongoDB");
 
-    // 🔥 Step 3: Store on Ethereum
+    // 🔥 Step 3: Store on Ethereum with verification key
     const timestamp = Math.floor(Date.now() / 1000);  
 
     console.log("📩 Sending data to blockchain...");
-    const tx = await contract.storeProof(filename, encryptedFileCID, zkp, timestamp);
+    const tx = await contract.storeProof(filename, encryptedFileCID, zkp, timestamp, verificationKey);
     await tx.wait();
     console.log("✅ Data stored successfully on Ethereum! TX Hash:", tx.hash);
-
-    console.log(tx);
 
     res.send({
       ok: true,
@@ -129,7 +128,6 @@ router.post("/new-file", async (req, res) => {
   }
 });
 
-
 // 🔥 Retrieve Files from MongoDB
 router.get('/get/:userId', async (req, res) => {
   const userId = req.params.userId;
@@ -140,6 +138,198 @@ router.get('/get/:userId', async (req, res) => {
     console.log(error);
     res.status(500).send({ ok: false, message: error.message });
   } 
+});
+
+router.get('/getfiles/:username', async (req, res) => {
+  const username = req.params.username;
+  try {
+    const user = await User.findOne({name: username});
+    if (!user) return res.status(404).send({ ok: false, message: "User not found" });
+    const userId = user._id;
+    console.log("User ID:", userId);
+    const response = await File.find({ userId });
+    const filteredFiles = response.map(file => {
+      return {
+        _id: file._id,
+        filename: file.filename,
+        pdf_url: file.pdf_url,
+        createdAt: file.createdAt,
+        updatedAt: file.updatedAt,
+        userId: file.userId,
+      };
+    })
+    
+    res.send({ ok: true, files: filteredFiles });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({ ok: false, message: error.message });
+  } 
+});
+
+// Route to handle verification key requests
+router.post('/request-verification', async (req, res) => {
+  try {
+    const { fileId, fileName, requesterId, requesterName, ownerId, message } = req.body;
+    
+    // Check if the request already exists
+    const existingRequest = await VerificationRequest.findOne({
+      fileId,
+      requesterId,
+      status: 'pending'
+    });
+    
+    if (existingRequest) {
+      return res.status(400).send({
+        ok: false,
+        message: "You already have a pending request for this file"
+      });
+    }
+    
+    // Create new verification request
+    const newRequest = new VerificationRequest({
+      fileId,
+      fileName,
+      requesterId,
+      requesterName,
+      ownerId,
+      message
+    });
+    
+    await newRequest.save();
+    
+    res.status(200).send({
+      ok: true,
+      message: "Verification key request submitted successfully",
+      request: newRequest
+    });
+    
+  } catch (error) {
+    console.error("Error creating verification request:", error);
+    res.status(500).send({
+      ok: false,
+      message: error.message
+    });
+  }
+});
+
+// Route to get all verification requests for a user
+router.get('/verification-requests/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const requests = await VerificationRequest.find({ ownerId: userId });
+    
+    // Get additional info for each request
+    const requestsWithDetails = await Promise.all(requests.map(async (request) => {
+      const file = await File.findById(request.fileId);
+      return {
+        ...request.toObject(),
+        fileInfo: file ? {
+          filename: file.filename,
+          createdAt: file.createdAt
+        } : null
+      };
+    }));
+    
+    res.status(200).send({
+      ok: true,
+      requests: requestsWithDetails
+    });
+    
+  } catch (error) {
+    console.error("Error fetching verification requests:", error);
+    res.status(500).send({
+      ok: false,
+      message: error.message
+    });
+  }
+});
+
+// Route to get all verification requests made by the user (sent requests)
+router.get('/sent-requests/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const requests = await VerificationRequest.find({ requesterId: userId });
+    
+    // Get additional info for each request
+    const requestsWithDetails = await Promise.all(requests.map(async (request) => {
+      const file = await File.findById(request.fileId);
+      const owner = await User.findById(request.ownerId);
+      return {
+        ...request.toObject(),
+        fileInfo: file ? {
+          filename: file.filename,
+          createdAt: file.createdAt
+        } : null,
+        ownerName: owner ? owner.name : 'Unknown User'
+      };
+    }));
+    
+    res.status(200).send({
+      ok: true,
+      requests: requestsWithDetails
+    });
+    
+  } catch (error) {
+    console.error("Error fetching sent requests:", error);
+    res.status(500).send({
+      ok: false,
+      message: error.message
+    });
+  }
+});
+
+// Route to update verification request status
+router.put('/verification-request/:requestId', async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { status, message } = req.body;
+    
+    // Get the request first to access fileId
+    const request = await VerificationRequest.findById(requestId);
+    if (!request) {
+      return res.status(404).send({
+        ok: false,
+        message: "Verification request not found"
+      });
+    }
+    
+    let updateData = { status, message };
+    
+    // If approving, get the verification key from the file and include it
+    if (status === 'approved') {
+      const file = await File.findById(request.fileId);
+      if (!file) {
+        return res.status(404).send({
+          ok: false,
+          message: "File not found"
+        });
+      }
+      
+      // Add verification key to the request
+      console.log("File verification key:", file);
+      
+      updateData.verificationKey = file.verificationKey;
+    }
+    
+    const updatedRequest = await VerificationRequest.findByIdAndUpdate(
+      requestId,
+      updateData,
+      { new: true }
+    );
+    
+    res.status(200).send({
+      ok: true,
+      message: `Request ${status}`,
+      request: updatedRequest
+    });
+    
+  } catch (error) {
+    console.error("Error updating verification request:", error);
+    res.status(500).send({
+      ok: false,
+      message: error.message
+    });
+  }
 });
 
 // ✅ Verification Route (Fetch from Ethereum)
@@ -173,6 +363,52 @@ router.get("/verify/:fileName", async (req, res) => {
         valid: false,
         message: "File not verified"
     })
+    }
+  } catch (error) {
+    console.error("❌ Verification Error:", error);
+    res.status(500).json({ valid: false, message: "Error retrieving file from blockchain" });
+  }
+});
+
+// ✅ Verification by verification key
+router.get("/verify-by-key/:verificationKey", async (req, res) => {
+  const { verificationKey } = req.params;
+
+  console.log(`📦 Verifying file with key: ${verificationKey}...`);
+
+  try {
+    // Try to get file from blockchain using verification key
+    const result = await contract.getFileProofByVerificationKey(verificationKey);
+    
+    if (!result || result.length < 5 || !result[0]) {
+      return res.status(404).json({ valid: false, message: "File not found on blockchain" });
+    }
+
+    const [storedFileName, cid, zkp, timestamp, storedVerificationKey] = result;
+    
+    // Also verify against MongoDB
+    const fileResult = await File.findOne({ verificationKey: verificationKey });
+    
+    if (!fileResult) {
+      return res.status(404).json({ valid: false, message: "File not found in database" });
+    }
+
+    // Verify that both blockchain and db data match
+    if (fileResult.zkp === zkp && fileResult.filename === storedFileName) {
+      const convertedTimestamp = Number(timestamp);
+      res.json({
+        valid: true,
+        fileName: storedFileName,
+        cid,
+        zkp,
+        timestamp: new Date(convertedTimestamp * 1000).toISOString(),
+        verificationKey: storedVerificationKey
+      });
+    } else {
+      res.json({
+        valid: false,
+        message: "File verification failed - data mismatch"
+      });
     }
   } catch (error) {
     console.error("❌ Verification Error:", error);
@@ -342,4 +578,3 @@ router.post('/submit-hash', (req, res) => {
 
 
 export default router;
- 

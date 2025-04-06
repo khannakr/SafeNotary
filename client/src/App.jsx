@@ -7,6 +7,7 @@ import Upload from './pages/Upload';
 import Verify from './pages/Verify';
 import Profile from './pages/Profile';
 import About from './pages/About';
+import SearchResults from './pages/SearchResults';
 
 export default function App() {
   return <BrowserRouter>
@@ -19,6 +20,7 @@ export default function App() {
     <Route path="/verify" element={<Verify />} />
     <Route path="/profile" element={<Profile />} />
     <Route path="/about" element={<About />} />
+    <Route path="/search-results" element={<SearchResults />} />
   </Routes>
   </BrowserRouter>
 }
