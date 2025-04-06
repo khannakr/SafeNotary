@@ -4,13 +4,17 @@ async function main() {
   // Get the contract factory
   const FileNotarization = await hre.ethers.getContractFactory("FileNotarization");
 
+  // IMPORTANT: Smart contracts are immutable once deployed
+  console.log("📄 Deploying FileNotarization contract...");
+  
   // Deploy the contract
   const fileNotarization = await FileNotarization.deploy();
-  await fileNotarization.waitForDeployment(); // ✅ Ensures the contract is fully deployed
+  await fileNotarization.waitForDeployment();
 
-  // ✅ Check if `target` or `address` works
+  // Get contract address
   const contractAddress = fileNotarization.target || fileNotarization.address;
   console.log("✅ Contract deployed to:", contractAddress);
+  console.log("⚠️ Update your contract address in interaction scripts!");
 }
 
 main()

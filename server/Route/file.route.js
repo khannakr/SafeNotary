@@ -37,32 +37,14 @@ if (!fs.existsSync(proofsDir)) {
 
 
 // ✅ ABI for the contract
-// const contractABI = [
-//   "function storeProof(string memory _fileName, string memory _cid, string memory _zkp, uint256 _timestamp) public"
-// ];
-// const contractABI = [
-//   {
-//     "inputs": [{ "internalType": "string", "name": "_fileName", "type": "string" }],
-//     "name": "getFileProof",
-//     "outputs": [
-//       { "internalType": "string", "name": "fileName", "type": "string" },
-//       { "internalType": "string", "name": "cid", "type": "string" },
-//       { "internalType": "string", "name": "zkp", "type": "string" },
-//       { "internalType": "uint256", "name": "timestamp", "type": "uint256" }
-//     ],
-//     "stateMutability": "view",
-//     "type": "function"
-//   }
-// ];
-
-
 const contractABI = [
   {
     "inputs": [
       { "internalType": "string", "name": "_fileName", "type": "string" },
       { "internalType": "string", "name": "_cid", "type": "string" },
       { "internalType": "string", "name": "_zkp", "type": "string" },
-      { "internalType": "uint256", "name": "_timestamp", "type": "uint256" }
+      { "internalType": "uint256", "name": "_timestamp", "type": "uint256" },
+      { "internalType": "string", "name": "_verificationKey", "type": "string" }
     ],
     "name": "storeProof",
     "outputs": [],
@@ -76,7 +58,21 @@ const contractABI = [
       { "internalType": "string", "name": "fileName", "type": "string" },
       { "internalType": "string", "name": "cid", "type": "string" },
       { "internalType": "string", "name": "zkp", "type": "string" },
-      { "internalType": "uint256", "name": "timestamp", "type": "uint256" }
+      { "internalType": "uint256", "name": "timestamp", "type": "uint256" },
+      { "internalType": "string", "name": "verificationKey", "type": "string" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "internalType": "string", "name": "_verificationKey", "type": "string" }],
+    "name": "getFileProofByVerificationKey",
+    "outputs": [
+      { "internalType": "string", "name": "fileName", "type": "string" },
+      { "internalType": "string", "name": "cid", "type": "string" },
+      { "internalType": "string", "name": "zkp", "type": "string" },
+      { "internalType": "uint256", "name": "timestamp", "type": "uint256" },
+      { "internalType": "string", "name": "verificationKey", "type": "string" }
     ],
     "stateMutability": "view",
     "type": "function"
@@ -86,7 +82,7 @@ const contractABI = [
 
 const contract = new ethers.Contract(contractAddress, contractABI, signer);
 
-// 🔥 Store File in MongoDB & Ethereum
+// 🔥 Store File in MongoDB & Ethereum - Update to include verification key
 router.post("/new-file", async (req, res) => {
   try {
     const { userId, pdf_url, hash, encryptedFileCID, decryptionKey, filename, verificationKey } = req.body;
@@ -111,15 +107,13 @@ router.post("/new-file", async (req, res) => {
     await newFile.save();
     console.log("✅ File data saved to MongoDB");
 
-    // 🔥 Step 3: Store on Ethereum
+    // 🔥 Step 3: Store on Ethereum with verification key
     const timestamp = Math.floor(Date.now() / 1000);  
 
     console.log("📩 Sending data to blockchain...");
-    const tx = await contract.storeProof(filename, encryptedFileCID, zkp, timestamp);
+    const tx = await contract.storeProof(filename, encryptedFileCID, zkp, timestamp, verificationKey);
     await tx.wait();
     console.log("✅ Data stored successfully on Ethereum! TX Hash:", tx.hash);
-
-    console.log(tx);
 
     res.send({
       ok: true,
@@ -133,7 +127,6 @@ router.post("/new-file", async (req, res) => {
     res.status(500).send({ ok: false, message: error.message });
   }
 });
-
 
 // 🔥 Retrieve Files from MongoDB
 router.get('/get/:userId', async (req, res) => {
@@ -370,6 +363,52 @@ router.get("/verify/:fileName", async (req, res) => {
         valid: false,
         message: "File not verified"
     })
+    }
+  } catch (error) {
+    console.error("❌ Verification Error:", error);
+    res.status(500).json({ valid: false, message: "Error retrieving file from blockchain" });
+  }
+});
+
+// ✅ Verification by verification key
+router.get("/verify-by-key/:verificationKey", async (req, res) => {
+  const { verificationKey } = req.params;
+
+  console.log(`📦 Verifying file with key: ${verificationKey}...`);
+
+  try {
+    // Try to get file from blockchain using verification key
+    const result = await contract.getFileProofByVerificationKey(verificationKey);
+    
+    if (!result || result.length < 5 || !result[0]) {
+      return res.status(404).json({ valid: false, message: "File not found on blockchain" });
+    }
+
+    const [storedFileName, cid, zkp, timestamp, storedVerificationKey] = result;
+    
+    // Also verify against MongoDB
+    const fileResult = await File.findOne({ verificationKey: verificationKey });
+    
+    if (!fileResult) {
+      return res.status(404).json({ valid: false, message: "File not found in database" });
+    }
+
+    // Verify that both blockchain and db data match
+    if (fileResult.zkp === zkp && fileResult.filename === storedFileName) {
+      const convertedTimestamp = Number(timestamp);
+      res.json({
+        valid: true,
+        fileName: storedFileName,
+        cid,
+        zkp,
+        timestamp: new Date(convertedTimestamp * 1000).toISOString(),
+        verificationKey: storedVerificationKey
+      });
+    } else {
+      res.json({
+        valid: false,
+        message: "File verification failed - data mismatch"
+      });
     }
   } catch (error) {
     console.error("❌ Verification Error:", error);

@@ -201,6 +201,28 @@ input {
     border-radius: 5px;
 }
 
+/* Add these styles for the radio buttons */
+.verify-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.radio-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.radio-label {
+  margin-left: 8px;
+}
+
+.input-group {
+  margin-bottom: 15px;
+}
+
 /* Footer Section */
 footer {
     background-color: #3b1f3b;
