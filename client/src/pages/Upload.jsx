@@ -4,6 +4,8 @@ import CryptoJS from "crypto-js";
 import "./styles.css";
 import { useUser } from "../context/userContext.jsx"; 
 import { Link } from "react-router-dom"; 
+import { v4 as uuidv4 } from "uuid";
+
 
 const UploadFile = () => {
   const [file, setFile] = useState(null);
@@ -11,12 +13,14 @@ const UploadFile = () => {
   const [fileHash, setFileHash] = useState("");
   const [encryptedFileCID, setEncryptedFileCID] = useState("");
   const [keyCID, setKeyCID] = useState("");
+  const [verificationKey, setVerificationKey] = useState("");
 
   const { user } = useUser();
   const userID = user ? user._id : null;   // Ensure user ID is properly set
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
+    //checking whether the filename is already used
   };
 
   // 🔹 Encrypt the File & Generate SHA-256 Hash of the Encrypted File
@@ -27,11 +31,11 @@ const UploadFile = () => {
       reader.onload = () => {
         const fileData = new Uint8Array(reader.result);
 
-        // 🔥 Generate a Random 256-bit AES Key
+        // Generate a Random 256-bit AES Key
         const key = CryptoJS.lib.WordArray.random(32);
         const keyBase64 = CryptoJS.enc.Base64.stringify(key);
 
-        // 🔥 Encrypt the File
+        // Encrypt the File
         const encrypted = CryptoJS.AES.encrypt(
           CryptoJS.lib.WordArray.create(fileData),
           keyBase64
@@ -89,37 +93,27 @@ const UploadFile = () => {
       setUploadMessage("Please select a file to upload.");
       return;
     }
-
-    
+  
     setUploadMessage("Encrypting file, generating hash, and uploading...");
-
+  
     try {
-      // 🔥 Step 1: Encrypt the file and get its hash
+      // 🔑 Step 1: Generate a random verification key
+      const generatedKey = uuidv4();
+      setVerificationKey(generatedKey); // Save to state
+  
+      // 🔥 Step 2: Encrypt the file and get its hash
       const { encryptedFile, encryptionKey, encryptedHash, decryptionKey } = await encryptFile(file);
-
-      // 🔥 Step 2: Upload the encrypted file to IPFS
+  
+      // 🔥 Step 3: Upload the encrypted file to IPFS
       const encryptedFileCID = await uploadToIPFS(encryptedFile, `encrypted_${file.name}`);
       if (!encryptedFileCID) throw new Error("Failed to upload encrypted file.");
-
-      // 🔥 Step 3: Upload the encryption key to IPFS
+  
+      // 🔥 Step 4: Upload the encryption key to IPFS
       const keyCID = await uploadToIPFS(encryptionKey, `key_${file.name}.txt`);
       if (!keyCID) throw new Error("Failed to upload encryption key.");
-
-      // const response = await fetch("http://localhost:4000/api/file/submit-hash", {  // ✅ Corrected Backend Port
-      //   method: "POST",
-      //   headers: {
-      //     "Content-Type": "application/json"
-      //   },
-      //   body: JSON.stringify({
-      //     hash: encryptedHash
-      //   })
-      // });
-      // const proof = await response.json();
-      // console.log("proof:", proof);
-      
-      // 🔥 Step 4: Store the data in the backend (Corrected Backend URL)
-
-      const res = await fetch("http://localhost:4000/api/file/new-file", {  // ✅ Corrected Backend Port
+  
+      // 🔥 Step 5: Send everything to the backend
+      const res = await fetch("http://localhost:4000/api/file/new-file", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -131,23 +125,23 @@ const UploadFile = () => {
           encryptedFileCID: encryptedFileCID,
           encryptionKeyCID: keyCID,
           decryptionKey: decryptionKey,
-          filename: file.name
+          filename: file.name,
+          verificationKey: generatedKey // 🟡 Send the key to the backend
         })
       });
-
+  
       const data = await res.json();
       console.log("Backend Response:", data);
-
-      // 🔥 Store CIDs in State
+  
       setEncryptedFileCID(encryptedFileCID);
       setKeyCID(keyCID);
-
       setUploadMessage("✅ File uploaded successfully!");
     } catch (error) {
       console.error("Error during encryption/upload:", error);
       setUploadMessage("❌ Error uploading file.");
     }
   };
+  
 
   return (
     <div>
@@ -170,12 +164,19 @@ const UploadFile = () => {
             <input type="file" onChange={handleFileChange} required />
             <button type="submit">Notarize</button>
           </form>
-        </div>
+      
 
-        <div className="result-card">
-          <h3>Upload Result</h3>
-          {uploadMessage && <p>{uploadMessage}</p>}
-        </div>
+
+  {uploadMessage && <p>{uploadMessage}</p>}
+  {verificationKey && (
+    <div style={{ marginTop: "1rem" }}>
+      <strong>Verification Key:</strong>
+      <div style={{ wordBreak: "break-all", background: "#f5f5f5", padding: "10px", borderRadius: "6px" }}>
+        {verificationKey}
+      </div>
+    </div>
+  )}
+</div>
       </main>
     </div>
   );
