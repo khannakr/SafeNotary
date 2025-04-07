@@ -27,3 +27,22 @@ revealing their contents, making it ideal for applications requiring privacy, su
 - Solidity Smart Contracts
 - Hardhat for smart contract development
 - snarkjs / circom for Zero-Knowledge Proof generation and verification
+
+## How It Works
+
+### Upload Phase:
+
+- User uploads a file.
+- File is encrypted and stored on IPFS and CID is generated.
+- A unique Verification Key of the file is generated. 
+- Hash of the encrypted file is generated.
+- A Zero-Knowledge Proof of the hash is created.
+- Real filename, CID, ZKP, Verification Key and timestamp are stored on the Ethereum smart contract.
+
+### Verification Phase:
+
+- User enters the Verification Key for verification.
+- The system fetches the stored CID, ZKP and timestamp from the blockchain based on the Verification Key.
+- It downloads the encrypted file from IPFS, rehashes it, and verifies the ZKP.
+- Displays whether the file is valid or tampered.
+
