@@ -10,3 +10,20 @@ revealing their contents, making it ideal for applications requiring privacy, su
 - Smart Contract Storage: The file’s CID, ZKP of the hash, real filename, and timestamp are stored on the Ethereum blockchain.
 - Integrity Verification: Anyone can verify a file’s integrity by retrieving data from the blockchain, downloading the encrypted file via CID, hashing it again, and verifying the ZKP.
 
+## Tech Stack
+# Blockchain & ZKP
+- Ethereum Sepolia Testnet (via MetaMask and Alchemy)
+- Solidity Smart Contracts
+- Hardhat for smart contract development
+- snarkjs / circom for Zero-Knowledge Proof generation and verification
+
+# Frontend
+- React.js
+- Web3.js / ethers.js for blockchain interaction
+- File encryption using crypto-js
+
+# Backend
+- Node.js, Express
+- IPFS HTTP Client for IPFS uploads
+- ZKP verification logic
+- MongoDB (for temporary ZKP and CID storage during development)
