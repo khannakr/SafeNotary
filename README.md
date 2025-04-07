@@ -13,19 +13,17 @@ revealing their contents, making it ideal for applications requiring privacy, su
 
 ## Tech Stack
 
-# Blockchain & ZKP
-- Ethereum Sepolia Testnet (via MetaMask and Alchemy)
-- Solidity Smart Contracts
-- Hardhat for smart contract development
-- snarkjs / circom for Zero-Knowledge Proof generation and verification
-
-# Frontend
+### Frontend
 - React.js
 - Web3.js / ethers.js for blockchain interaction
 - File encryption using crypto-js
 
-# Backend
+### Backend
 - Node.js, Express
 - IPFS HTTP Client for IPFS uploads
 - ZKP verification logic
 - MongoDB (for temporary ZKP and CID storage during development)
+- Ethereum Sepolia Testnet (via MetaMask and Alchemy)
+- Solidity Smart Contracts
+- Hardhat for smart contract development
+- snarkjs / circom for Zero-Knowledge Proof generation and verification
