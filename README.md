@@ -142,6 +142,10 @@ Place this in your `/circuits` folder.
 - Install **MetaMask** browser extension.
 - Run local Ethereum node using `npx hardhat node`.
 
+## Architecture
+
+![system architecture](architech.jpg)
+
 
 ## **Conclusion**
 
