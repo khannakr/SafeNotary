@@ -140,4 +140,31 @@ Place this in your `/circuits` folder.
 - Install **MetaMask** browser extension.
 - Run local Ethereum node using `npx hardhat node`.
 
----
+
+## **Conclusion**
+
+This project presents a privacy-preserving solution for secure file notarization using blockchain and Zero-Knowledge Proofs (ZKPs). By combining IPFS for decentralized storage, ZKPs for private validation, and blockchain for immutable timestamping, the system ensures tamper resistance, content confidentiality, and verifiability without revealing the actual file contents. It effectively addresses critical challenges such as content integrity, proof of existence, and privacy in digital document handling.
+
+
+## **Future Scope**
+
+1. **Integration with Real-World Legal Platforms**  
+   Extend the system to integrate with legal or governmental document verification portals for real-time notarization services.
+
+2. **Support for Multiple File Formats**  
+   Add support for validating file type and format (e.g., legal contracts, images, PDFs) using ZKP circuits.
+
+3. **Off-Chain Verification System**  
+   Implement lightweight off-chain verifiers that allow fast proof checking without blockchain interactions.
+
+4. **Advanced ZKP Optimization**  
+   Explore advanced ZKP systems like zk-STARKs or Bulletproofs to reduce trusted setup and improve performance.
+
+5. **User Authentication Layer**  
+   Add user identity or wallet-based access control to manage document verification permissions securely.
+
+6. **Mobile/Web Extension**  
+   Develop a browser extension or mobile app for quick notarization and verification directly from user devices.
+
+7. **Audit Trail & Logs**  
+   Provide an optional logging mechanism (on-chain or off-chain) for proof-of-access and verification history.
