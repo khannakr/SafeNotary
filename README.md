@@ -77,7 +77,7 @@ npx hardhat
 
 ---
 
-### **3. Install IPFS **
+### **3. Install IPFS**
 
 ```bash
 npm install -g ipfs
@@ -138,6 +138,6 @@ Place this in your `/circuits` folder.
 
 ### **7. Optional: MetaMask + Ganache (for local testing)**
 - Install **MetaMask** browser extension.
-- Run local Ethereum node using **Ganache** or `npx hardhat node`.
+- Run local Ethereum node using `npx hardhat node`.
 
 ---
