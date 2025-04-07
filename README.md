@@ -6,12 +6,11 @@ revealing their contents, making it ideal for applications requiring privacy, su
 ## Key Features
 
 - Ensures file notarization without revealing the file content using Zero-Knowledge Proofs.
-- Stores encrypted files on IPFS for decentralized and tamper-proof access.
+- Stores encrypted files on IPFS for decentralization.
 - Records proof, CID, and timestamp immutably on the blockchain.
 - Detects any file tampering during the verification process.
 - Verifies authenticity without requiring access to the actual file content.
 - Prevents hash leakage by using ZKP instead of storing raw hashes.
-- Works for any file type, making it suitable for legal and confidential documents.
 - Provides a secure and transparent system for file validation and trust.
 
 ## Tech Stack
@@ -43,8 +42,8 @@ revealing their contents, making it ideal for applications requiring privacy, su
 - Real filename, CID, ZKP, Verification Key and timestamp are stored on the Ethereum smart contract.
 
 ### Verification Phase:
-
-- User enters the Verification Key for verification.
+- Verifier request for Verification Key from uploader.
+- Verifier enters the Verification Key for verification.
 - The system fetches the stored CID, ZKP and timestamp from the blockchain based on the Verification Key.
 - It downloads the encrypted file from IPFS, rehashes it, and verifies the ZKP.
 - Displays whether the file is valid or tampered.
